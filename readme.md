@@ -75,4 +75,5 @@ npm start
 ## 📄 Licença
 - Este projeto está sob a licença MIT - veja o arquivo LICENSE para detalhes.
 
+## 
 Desenvolvido com ❤️ por Rodrigo Vasconcelos Moreira
