@@ -1,3 +1,10 @@
+# 🤖 Chatbot WhatsApp - Rodrigo Moreira
+
+[![Node.js](https://img.shields.io/badge/Node.js-18%2B-green?logo=node.js)](https://nodejs.org/)
+[![whatsapp-web.js](https://img.shields.io/badge/whatsapp--web.js-1.31-blue)](https://wwebjs.dev/)
+[![License](https://img.shields.io/badge/License-MIT-yellow)](https://opensource.org/licenses/MIT)
+
+Um chatbot inteligente para WhatsApp desenvolvido em Node.js, com integração de IA generativa para respostas contextualizadas e armazenamento de histórico de conversas.
 ## ✨ Funcionalidades Principais
 
 - **Respostas Inteligentes** 🧠 - Integração com API de IA (DeepSeek) para respostas naturais e contextualizadas
