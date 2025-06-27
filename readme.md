@@ -12,7 +12,6 @@ Um chatbot inteligente desenvolvido em **Node.js**, utilizando a biblioteca [wha
 
 | Recurso                  | Descrição                                                         |
 |--------------------------|-------------------------------------------------------------------|
-| 📋 Menu Interativo       | Interface via WhatsApp com 5 opções configuráveis                |
 | 🧠 Integração com IA     | Comunicação com modelos LLM para respostas inteligentes          |
 | 🧩 Controle de Estado    | Fluxos personalizados por usuário usando MongoDB                 |
 | 💬 Simulação de Digitação| UX aprimorada com efeito de “digitando...”                       |
@@ -39,18 +38,10 @@ Depois disso, escaneie o QR Code que aparecerá no terminal com o seu WhatsApp.
 
 ✅ Armazenamento com MongoDB
 
-🔜 Painel administrativo (Angular)
-
-🔜 Suporte completo a NLP
-
-🔜 Suporte a RAG (busca + IA)
-
 🌟 Destaques
 🔄 Controle de fluxo por estado
 
 💾 Histórico por usuário persistido no MongoDB
-
-🔥 Agendador de mensagens automáticas com cron
 
 🤝 Contribuição
 Contribuições são bem-vindas!
