@@ -72,8 +72,5 @@ npm start
 - Push para a branch (git push origin feature/nova-feature)
 - Abra um Pull Request
 
-## 📄 Licença
-- Este projeto está sob a licença MIT - veja o arquivo LICENSE para detalhes.
-
 ## 
 Desenvolvido com ❤️ por Rodrigo Vasconcelos Moreira
