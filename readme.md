@@ -35,3 +35,51 @@ cd chatbot-whatsapp
 ```bash
 npm install
 ```
+
+3. Configure o ambiente:
+
+- Crie um arquivo .env baseado no .env.example
+- Adicione suas credenciais:
+```bash
+MONGO_URI=sua_string_de_conexao_mongodb
+DEEPSEEK_API_KEY=sua_chave_api
+DEEPSEEK_API_URL=https://api.deepseek.com/v1
+DEEPSEEK_MODEL=deepseek-chat
+```
+
+4. Inicie o bot:
+```bash
+npm start
+```
+
+5. Escaneie o QR Code com seu WhatsApp
+
+🌟 Destaques Técnicos
+Contexto de Conversa: Armazena as últimas 5 mensagens para respostas contextualizadas
+
+Tipagem de Mensagens: Separa mensagens de usuário e bot no banco de dados
+
+Tratamento de Erros: Respostas alternativas quando a IA não está disponível
+
+Performance: Monitoramento do tempo de resposta da IA
+
+📌 Roadmap
+✅ Conexão básica com WhatsApp
+✅ Integração com IA (DeepSeek)
+✅ Armazenamento com MongoDB
+
+🤝 Como Contribuir
+Faça um fork do projeto
+
+Crie sua branch (git checkout -b feature/nova-feature)
+
+Commit suas mudanças (git commit -m 'Adiciona nova feature')
+
+Push para a branch (git push origin feature/nova-feature)
+
+Abra um Pull Request
+
+📄 Licença
+Este projeto está sob a licença MIT - veja o arquivo LICENSE para detalhes.
+
+Desenvolvido com ❤️ por Rodrigo Vasconcelos Moreira
