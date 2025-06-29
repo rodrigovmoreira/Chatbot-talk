@@ -19,18 +19,25 @@ socket.on('qr', (url) => {
 
 socket.on('status', (message) => {
   statusDiv.textContent = message;
+  const instructions = document.querySelector('.instructions');
+  
   if (message.includes('Conectado')) {
     statusDiv.className = 'status connected';
-    // Oculta QR Code e mostra ícone de sucesso
     qrcodeContainer.classList.add('hidden');
     successContainer.classList.remove('hidden');
-    // Opcional: Altera o título
     document.querySelector('h1').textContent = 'WhatsApp Conectado!';
-  } else if (message.includes('Desconectado')) {
-    statusDiv.className = 'status error';
-    // Volta ao estado inicial
-    qrcodeContainer.classList.remove('hidden');
-    successContainer.classList.add('hidden');
+    // Altera as instruções para modo operacional
+    instructions.innerHTML = `
+      <p>O bot está ativo!</p>
+      <p>Você pode minimizar esta janela.</p>
+    `;
+  } else {
+    // Restaura instruções originais se desconectar
+    instructions.innerHTML = `
+      <p>1. Abra o WhatsApp no seu celular</p>
+      <p>2. Toque em <strong>Menu → Dispositivos conectados</strong></p>
+      <p>3. Escaneie o QR Code acima</p>
+    `;
   }
 });
 
