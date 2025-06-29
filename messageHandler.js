@@ -1,60 +1,54 @@
 // === messageHandler.js ===
 const { saveMessage, getLastMessages } = require('./services/message');
-const { getOrCreateSession, setSessionState } = require('./services/session');
-const { simulateTyping, delay } = require('./utils/chatUtils');
+const { getOrCreateSession } = require('./services/session');
+const { simulateTyping } = require('./utils/chatUtils');
 const { generateAIResponse } = require('./services/ai');
 
-async function handleMessage(client, msg) {
-  try {
-    console.log('📩 Mensagem recebida:', msg.body);
+// Configurações
+const MAX_HISTORY = 5; // Número de mensagens para contexto
+const ERROR_MESSAGE = '⚠️ Ops! Tive um problema. Pode tentar novamente?';
 
-    // Validação inicial
-    if (!msg.from.endsWith('@c.us')) {
-      console.log('Mensagem ignorada (não é de um usuário individual).');
-      return;
-    }
+async function handleMessage(client, msg) {
+  // Validação básica da mensagem
+  if (!msg?.from || !msg?.body || !msg.from.endsWith('@c.us')) {
+    console.log('Mensagem inválida ignorada');
+    return;
+  }
+
+  try {
+    console.log('📩 Mensagem recebida de:', msg.from.replace('@c.us', ''), 'Conteúdo:', msg.body);
 
     const chat = await msg.getChat();
-    const contact = await msg.getContact();
-    const name = contact.pushname || 'Amigo';
-    const body = msg.body.toLowerCase();
+    const userMessage = msg.body.trim();
 
-    // Buscar ou criar sessão do usuário
-    const session = await getOrCreateSession(msg.from);
-    const state = session.state;
+    // Ignora mensagens vazias
+    if (!userMessage) return;
 
-    // 🔵 Salvar mensagem do usuário
-    await saveMessage(msg.from, 'user', msg.body);
+    // Prepara contexto da conversa
+    const history = await getLastMessages(msg.from, MAX_HISTORY).catch(() => []);
+    const context = history
+      .reverse()
+      .map(m => `${m.role === 'user' ? 'Usuário' : 'Bot'}: ${m.content}`)
+      .join('\n');
 
-    // Mensagem longa ou pergunta — IA entra
-    if (body.includes('?') || body.split(' ').length > 0) {
-      await simulateTyping(chat);
+    // Salva mensagem do usuário
+    await saveMessage(msg.from, 'user', userMessage);
 
-      // 🔵 Antes de enviar para IA, buscar histórico
-      const history = await getLastMessages(msg.from, 5); // últimas 5 mensagens
-      const context = history
-        .reverse()
-        .map(m => `${m.role === 'user' ? 'Usuário' : 'Bot'}: ${m.content}`)
-        .join('\n');
+    // Simula digitação e gera resposta
+    await simulateTyping(chat);
+    const aiResponse = await generateAIResponse(userMessage, context) || 
+                      "🤖 Não consegui entender. Pode reformular?";
 
-      const aiResponse = await generateAIResponse(body, context);
-
-      if (aiResponse) {
-        await client.sendMessage(msg.from, aiResponse);
-
-        // 🔵 Salvar resposta do bot
-        await saveMessage(msg.from, 'bot', aiResponse);
-      } else {
-        await client.sendMessage(msg.from, "🤖 Pode repetir? Ainda estou aprendendo.");
-      }
-    }
+    // Envia e salva resposta
+    await client.sendMessage(msg.from, aiResponse);
+    await saveMessage(msg.from, 'bot', aiResponse);
 
   } catch (error) {
-    console.error('❌ Erro no handleMessage:', error.message);
+    console.error('❌ Erro no handleMessage:', error);
     try {
-      await client.sendMessage(msg.from, '⚠️ Desculpe, algo deu errado. Tente novamente digitando *menu*.');
+      await client.sendMessage(msg.from, ERROR_MESSAGE);
     } catch (sendError) {
-      console.error('❌ Erro ao tentar enviar mensagem de erro:', sendError.message);
+      console.error('Falha ao enviar mensagem de erro:', sendError);
     }
   }
 }

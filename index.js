@@ -1,17 +1,21 @@
-// ===index.js===
+require('dotenv').config();
 const { Client } = require('whatsapp-web.js');
-const qrcode = require('qrcode-terminal');
 const { handleMessage } = require('./messageHandler');
 const dbConnect = require('./services/database');
-require('dotenv').config();
+const { startServer } = require('./server'); // Importamos o servidor
 
-// Conectar ao banco de dados MongoDB
-const client = new Client();
+// Inicializações
 dbConnect();
+const client = new Client();
 
-// Configurar o cliente WhatsApp
-client.on('qr', qr => qrcode.generate(qr, { small: true }));
-client.on('ready', () => console.log('Bot conectado ao WhatsApp'));
+// Configuração do WhatsApp Client
+client.on('ready', () => {
+  console.log('✅ Bot conectado ao WhatsApp');
+});
+
 client.on('message', async msg => handleMessage(client, msg));
+
+// Inicia tanto o servidor web quanto o WhatsApp client
+startServer(client); // Passamos o client para o servidor
 
 client.initialize();

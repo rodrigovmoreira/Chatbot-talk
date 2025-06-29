@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chatbot WhatsApp</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <div class="container">
+    <h1>Conectar WhatsApp Bot</h1>
+    <div id="status" class="status">Aguardando QR Code...</div>
+    <div id="qrcode-container">
+      <img id="qrcode" src="" alt="QR Code para conexão">
+    </div>
+    <div class="instructions">
+      <p>1. Abra o WhatsApp no seu celular</p>
+      <p>2. Toque em <strong>Menu → Dispositivos conectados</strong></p>
+      <p>3. Escaneie o QR Code acima</p>
+    </div>
+  </div>
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/js/app.js"></script>
+</body>
+</html>
