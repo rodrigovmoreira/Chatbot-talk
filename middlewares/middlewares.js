@@ -1,4 +1,4 @@
-const { getConversationTopics } = require('../services/message');
+const { getConversationTopics } = require('../services/models/Message');
 const Intent = require('../services/models/Intent');
 const Config = require('../services/models/Config');
 
@@ -10,12 +10,13 @@ async function isCommand(message) {
 async function messagePreprocessor(client, msg) {
   if (msg.from.includes('@g.us') || msg.isStatus) return false;
   
+  // Primeiro verifica se é um comando
   if (await isCommand(msg.body)) {
     await handleCommand(client, msg);
-    return false;
+    return false; // Impede o processamento posterior
   }
 
-  // Verificar intenções no banco
+  // Depois verifica intenções genéricas
   const intent = await detectIntent(msg.body);
   if (intent) {
     const response = intent.responses[Math.floor(Math.random() * intent.responses.length)];
@@ -23,7 +24,7 @@ async function messagePreprocessor(client, msg) {
     return false;
   }
 
-  return true;
+  return true; // Permite o processamento normal pela IA
 }
 
 async function detectIntent(message) {

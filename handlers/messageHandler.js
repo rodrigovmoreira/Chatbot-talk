@@ -1,5 +1,5 @@
 const { isCommand } = require('../middlewares/middlewares');
-const { saveMessage, getLastMessages, getConversationTopics } = require('../services/message');
+const { saveMessage, getLastMessages, getConversationTopics } = require('../services/models/Message');
 const { simulateTyping } = require('../utils/chatUtils');
 const { generateAIResponse } = require('../services/ai');
 const { messagePreprocessor, handleCommand } = require('../middlewares/middlewares');
@@ -16,10 +16,6 @@ async function handleMessage(client, msg) {
 
     // Pré-processamento e comandos
     if (!(await messagePreprocessor(client, msg))) {
-      return;
-    }
-    if (isCommand(msg.body)) {
-      await handleCommand(client, msg);
       return;
     }
 
