@@ -3,13 +3,11 @@ const { saveMessage, getLastMessages } = require('./services/message');
 const { getOrCreateSession, setSessionState } = require('./services/session');
 const { simulateTyping } = require('./utils/chatUtils');
 const { generateAIResponse } = require('./services/ai');
-const Flow = require('./models/Flow');
 
 // Configurações
-const MAX_HISTORY = 5; // Número de mensagens para contexto
+const MAX_HISTORY = 5;
 const ERROR_MESSAGE = '⚠️ Ops! Tive um problema. Pode tentar novamente?';
 
-// Serviço de menus (pode ser migrado para DB depois)
 const menuService = {
   getMainMenu: () => {
     return `🤖 *Atendimento Moreira Bot* 🤖\n\n` +
@@ -25,26 +23,20 @@ const menuService = {
   getMenuForOption: (option) => {
     const menus = {
       '1': `📞 *Falar com atendente*:\n\n` +
-        `Um atendente humano será notificado e entrará em contato em breve.\n` +
-        `Enquanto isso, deseja:\n\n` +
-        `1 - Voltar ao menu principal\n` +
-        `2 - Deixar seu número para retorno`,
-
-      '2': `📦 *Informações sobre produtos*:\n\n` +
-        `1 - Lista completa de produtos\n` +
-        `2 - Promoções da semana\n` +
-        `3 - Condições de pagamento\n` +
-        `4 - Voltar ao menu principal`,
-
-      '3': `🔧 *Suporte técnico*:\n\n` +
-        `1 - Problemas com produto\n` +
-        `2 - Dúvidas de instalação\n` +
-        `3 - Garantia\n` +
-        `4 - Voltar ao menu principal`,
-
+           `Um atendente será contactado em breve. Enquanto isso:\n\n` +
+           `1 - Voltar ao menu\n` +
+           `2 - Deixar meu número`,
+      '2': `📦 *Produtos*:\n\n` +
+           `1 - Lista de produtos\n` +
+           `2 - Promoções\n` +
+           `3 - Voltar`,
+      '3': `🔧 *Suporte*:\n\n` +
+           `1 - Problemas com produto\n` +
+           `2 - Dúvidas técnicas\n` +
+           `3 - Voltar`,
       '4': `📦 *Status do pedido*:\n\n` +
-        `Por favor, digite o número do seu pedido ou:\n\n` +
-        `1 - Voltar ao menu principal`
+           `Digite o número do pedido ou:\n\n` +
+           `1 - Voltar`
     };
     return menus[option] || menuService.getMainMenu();
   }
@@ -59,55 +51,50 @@ async function handleMessage(client, msg) {
     const chat = await msg.getChat();
     const userMessage = msg.body.trim();
     const phone = msg.from;
-
+    
     if (!userMessage) return;
 
-    // Obtém sessão e define resposta padrão
     const session = await getOrCreateSession(phone);
-    let response = menuService.getMainMenu(); // Padrão: mostra menu
-    let newState = null;
+    let response = '';
+    let newState = session.state;
 
-    // Se estiver em modo livre, processa com IA
+    // Verifica se está em modo de conversa livre
     if (session.state === 'FREE_CHAT') {
       if (userMessage.toLowerCase() === 'sair') {
         response = menuService.getMainMenu();
+        newState = null;
       } else {
         const history = await getLastMessages(phone, MAX_HISTORY);
         const context = history
           .reverse()
-          .map(m => `${m.role}: ${m.content}`)
+          .map(m => `${m.role === 'user' ? 'Usuário' : 'Bot'}: ${m.content}`)
           .join('\n');
 
-        const aiResponse = await generateAIResponse(userMessage, context);
-        response = aiResponse || "🤖 Não entendi. Pode reformular?";
-        newState = 'FREE_CHAT'; // Mantém no modo livre
+        response = await generateAIResponse(userMessage, context) || 
+                  "🤖 Não entendi. Pode reformular?";
+        newState = 'FREE_CHAT';
       }
-    }
+    } 
     // Processa opções do menu
-    else {
-      switch (userMessage) {
-        case '1':
-        case '2':
-        case '3':
-        case '4':
-          response = menuService.getMenuForOption(userMessage);
-          newState = `MENU_${userMessage}`;
-          break;
-
+    else if (/^[1-5]$/.test(userMessage)) {
+      switch(userMessage) {
         case '5':
           response = "💡 *Modo conversa livre ativado*:\n\n" +
-            "Pergunte qualquer coisa! Digite *sair* para voltar ao menu.";
+                    "Pergunte qualquer coisa! Digite *sair* para voltar ao menu.";
           newState = 'FREE_CHAT';
           break;
-
         default:
-          // Se não for opção válida, mostra menu com mensagem de ajuda
-          response = "⚠️ Por favor, escolha uma opção válida:\n\n" +
-            menuService.getMainMenu();
+          response = menuService.getMenuForOption(userMessage);
+          newState = `MENU_${userMessage}`;
       }
     }
+    // Resposta padrão para entradas inválidas
+    else {
+      response = "⚠️ Por favor, escolha uma opção válida:\n\n" + 
+                menuService.getMainMenu();
+    }
 
-    // Atualiza estado e envia resposta
+    // Envia a resposta
     await setSessionState(phone, newState);
     await saveMessage(phone, 'user', userMessage);
     await simulateTyping(chat);
@@ -115,11 +102,13 @@ async function handleMessage(client, msg) {
     await saveMessage(phone, 'bot', response);
 
   } catch (error) {
-    console.error('Erro:', error);
-    await client.sendMessage(msg.from, ERROR_MESSAGE);
+    console.error('Erro no handleMessage:', error);
+    try {
+      await client.sendMessage(msg.from, ERROR_MESSAGE);
+    } catch (sendError) {
+      console.error('Falha ao enviar mensagem de erro:', sendError);
+    }
   }
-
-
 }
 
 module.exports = { handleMessage };
