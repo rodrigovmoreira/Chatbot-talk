@@ -119,59 +119,7 @@ async function handleMessage(client, msg) {
     await client.sendMessage(msg.from, ERROR_MESSAGE);
   }
 
-    try {
-    const phone = msg.from;
-    const userMessage = msg.body.trim().toLowerCase();
 
-    // 1. Verifica se é um comando administrativo
-    if (userMessage.startsWith('/admin')) {
-      return handleAdminCommand(client, msg);
-    }
-
-    // 2. Busca fluxo correspondente
-    const flow = await Flow.findOne({
-      $or: [
-        { trigger: userMessage },
-        { trigger: 'default' }
-      ],
-      isActive: true
-    }).sort('-createdAt');
-
-    // 3. Processa resposta
-    if (flow) {
-      switch(flow.responseType) {
-        case 'text':
-          await client.sendMessage(phone, flow.content);
-          break;
-          
-        case 'menu':
-          const menu = JSON.parse(flow.content);
-          let reply = `*${menu.title}*\n\n${menu.text}\n\n`;
-          
-          menu.options.forEach((opt, i) => {
-            reply += `${i+1} - ${opt.text}\n`;
-          });
-          
-          await client.sendMessage(phone, reply);
-          break;
-          
-        case 'redirect':
-          const nextFlow = await Flow.findById(flow.redirectTo);
-          if (nextFlow) {
-            await client.sendMessage(phone, nextFlow.content);
-          }
-          break;
-      }
-    } else {
-      // Resposta padrão se nenhum fluxo for encontrado
-      await client.sendMessage(phone, "Desculpe, não entendi. Digite *menu* para ver as opções.");
-    }
-
-  } catch (error) {
-    console.error('Erro:', error);
-    await client.sendMessage(msg.from, ERROR_MESSAGE);
-  }
-  
 }
 
 module.exports = { handleMessage };

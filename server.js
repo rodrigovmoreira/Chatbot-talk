@@ -39,35 +39,64 @@ function startServer(whatsappClient) {
   const generateAndEmitQr = async (io, qr) => {
     try {
       const qrImageUrl = await qrcode.toDataURL(qr);
-      io.emit('qr', qrImageUrl);
-      io.emit('status', 'Escaneie o QR Code no WhatsApp');
+      io.of('/admin').emit('qr', qrImageUrl);
+      io.of('/admin').emit('status', 'Escaneie o QR Code no WhatsApp');
     } catch (error) {
       console.error('Erro ao gerar QR Code:', error);
     }
   };
 
-  // Handlers de eventos do WhatsApp
-  whatsappClient.on('qr', (qr) => {
-    lastQr = qr;
-    generateAndEmitQr(io, qr);
+  // No handler do WhatsApp Client:
+  whatsappClient.on('qr', async (qr) => {
+    console.log('Evento QR recebido do WhatsApp Web');
+    try {
+      const qrImageUrl = await qrcode.toDataURL(qr);
+      io.of('/admin').emit('qr', qrImageUrl);
+      io.of('/admin').emit('status', 'Escaneie o QR Code no WhatsApp');
+    } catch (error) {
+      console.error('Erro ao gerar QR Code:', error);
+      io.of('/admin').emit('status', 'Erro ao gerar QR Code');
+    }
+  });
+
+  // Adicione este handler para o namespace admin
+  io.of('/admin').on('connection', (socket) => {
+    console.log('Cliente conectado ao namespace /admin');
+
+    // Responde a solicitações de QR Code
+    socket.on('request_qr', () => {
+      console.log('Cliente solicitou QR Code');
+      if (lastQr) {
+        qrcode.toDataURL(lastQr)
+          .then(url => {
+            socket.emit('qr', url);
+            socket.emit('status', 'Escaneie o QR Code no WhatsApp');
+          })
+          .catch(err => {
+            console.error('Erro ao regenerar QR:', err);
+            socket.emit('status', 'Erro ao gerar QR Code');
+          });
+      }
+    });
+
+    socket.on('disconnect', () => {
+      console.log('Cliente desconectado do namespace /admin');
+    });
   });
 
   whatsappClient.on('ready', () => {
     console.log('✅ WhatsApp conectado!');
-    io.emit('status', 'Conectado com sucesso!');
+    io.of('/admin').emit('status', 'Conectado com sucesso!');
   });
 
   whatsappClient.on('disconnected', () => {
     console.log('❌ WhatsApp desconectado');
-    io.emit('status', 'Desconectado - Reinicie o servidor');
+    io.of('/admin').emit('status', 'Desconectado - Reinicie o servidor');
   });
 
   // Rotas públicas
   app.get('/', (req, res) => {
-    res.render('index', { title: 'Conectar WhatsApp Bot' });
-    if (lastQr) {
-      generateAndEmitQr(io, lastQr);
-    }
+    res.render('index', { title: 'Chatbot WhatsApp' });
   });
 
   // Rotas de autenticação
@@ -93,7 +122,10 @@ function startServer(whatsappClient) {
 
   // Rotas administrativas protegidas
   app.get('/admin', authMiddleware, (req, res) => {
-    res.render('admin/dashboard');
+    res.render('admin/dashboard', {
+      title: 'Painel Administrativo',
+      user: req.session.user
+    });
   });
 
   // API para gerenciar fluxos (protegida)
@@ -115,15 +147,17 @@ function startServer(whatsappClient) {
     }
   });
 
-  // Socket.IO connections
-  io.on('connection', (socket) => {
-    console.log('Novo cliente conectado');
+  // Configuração do Socket.IO namespaces
+  const adminNamespace = io.of('/admin');
+
+  adminNamespace.on('connection', (socket) => {
+    console.log('Novo cliente conectado ao namespace /admin');
     if (lastQr) {
-      generateAndEmitQr(socket, lastQr);
+      generateAndEmitQr(adminNamespace, lastQr);
     }
 
     socket.on('disconnect', () => {
-      console.log('Cliente desconectado');
+      console.log('Cliente desconectado do namespace /admin');
     });
   });
 

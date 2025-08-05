@@ -1,82 +1,130 @@
 <!DOCTYPE html>
 <html>
-
 <head>
     <title>Painel Admin</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .qrcode-container {
+            width: 250px;
+            height: 250px;
+            margin: 0 auto;
+        }
+        .qrcode-container img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+        .animate-spin {
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+    </style>
 </head>
-
-<body class="bg-gray-100">
+<body class="bg-gray-100 min-h-screen">
     <div class="container mx-auto p-4">
-        <!-- Adicione este botão no canto superior direito -->
-        <div class="text-right mb-4">
-            <a href="/" class="inline-block bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600 transition">
-                <i class="fas fa-arrow-left mr-2"></i>Voltar ao Chat
+        <!-- Cabeçalho -->
+        <div class="flex justify-between items-center mb-8">
+            <h1 class="text-2xl font-bold text-gray-800">
+                <i class="fas fa-cog mr-2 text-blue-500"></i>Painel Administrativo
+            </h1>
+            <a href="/" class="text-blue-500 hover:text-blue-700">
+                <i class="fas fa-arrow-left mr-1"></i>Voltar
             </a>
         </div>
 
-        <h1 class="text-2xl font-bold mb-6">Configuração do Chatbot</h1>
+        <!-- Seção do QR Code -->
+        <div class="bg-white p-6 rounded-lg shadow-md mb-8">
+            <h2 class="text-xl font-semibold mb-4 text-gray-700">
+                <i class="fas fa-qrcode mr-2 text-green-500"></i>Conexão WhatsApp
+            </h2>
 
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <!-- Card Fluxos -->
-            <div class="bg-white p-4 rounded shadow">
-                <h2 class="text-xl font-semibold mb-4">Fluxos de Conversa</h2>
-                <div id="flows-list" class="mb-4">
-                    <!-- Lista de fluxos será carregada via AJAX -->
-                </div>
-                <button onclick="openFlowModal()" class="bg-green-500 text-white px-4 py-2 rounded">
-                    Novo Fluxo
-                </button>
+            <div id="connection-status" class="mb-4 p-3 rounded-lg bg-yellow-100 text-yellow-800 text-center">
+                <i class="fas fa-circle-notch animate-spin mr-2"></i> Aguardando QR Code...
             </div>
 
-            <!-- Card Conexão WhatsApp -->
-            <div class="bg-white p-4 rounded shadow">
-                <h2 class="text-xl font-semibold mb-4">Conexão WhatsApp</h2>
-                <div id="qrcode-container" class="mb-4">
-                    <p class="text-gray-600">Escaneie o QR Code para conectar</p>
-                    <img id="qrcode" class="mx-auto my-4" src="" alt="QR Code">
-                </div>
-                <div id="connection-status" class="p-2 rounded bg-yellow-100 text-yellow-800">
-                    Aguardando conexão...
-                </div>
+            <div class="qrcode-container bg-white p-4 border-2 border-dashed border-gray-300 rounded-lg mb-4">
+                <img id="qrcode" src="" alt="QR Code para conexão" class="hidden">
+            </div>
+
+            <div class="text-center text-sm text-gray-500">
+                Escaneie este QR Code no WhatsApp > Dispositivos conectados
             </div>
         </div>
-    </div>
 
-    <!-- Modal para edição de fluxos -->
-    <div id="flow-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-        <div class="bg-white p-6 rounded-lg w-full max-w-md">
-            <h3 class="text-lg font-bold mb-4">Editar Fluxo</h3>
-            <form id="flow-form">
-                <input type="hidden" id="flow-id">
-                <div class="mb-4">
-                    <label class="block mb-2">Gatilho (palavra-chave ou "menu")</label>
-                    <input type="text" id="trigger" class="w-full p-2 border rounded">
-                </div>
-                <div class="mb-4">
-                    <label class="block mb-2">Tipo de Resposta</label>
-                    <select id="response-type" class="w-full p-2 border rounded">
-                        <option value="text">Texto</option>
-                        <option value="menu">Menu</option>
-                    </select>
-                </div>
-                <div class="mb-4">
-                    <label class="block mb-2">Conteúdo</label>
-                    <textarea id="content" class="w-full p-2 border rounded" rows="4"></textarea>
-                </div>
-                <div class="flex justify-end">
-                    <button type="button" onclick="closeFlowModal()" class="mr-2 px-4 py-2 border rounded">
-                        Cancelar
-                    </button>
-                    <button type="submit" class="bg-blue-500 text-white px-4 py-2 rounded">
-                        Salvar
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
+        <!-- Resto do seu conteúdo admin... -->
 
-    <script src="/js/admin.js"></script>
+        <script src="/socket.io/socket.io.js"></script>
+        <script>
+            // Conecta ao namespace /admin
+            const socket = io('/admin', {
+                reconnection: true,
+                reconnectionAttempts: Infinity,
+                reconnectionDelay: 1000,
+                reconnectionDelayMax: 5000
+            });
+
+            // Logs para debug
+            socket.on('connect', () => {
+                console.log('Conectado ao servidor Socket.IO');
+                document.getElementById('connection-status').innerHTML = 
+                    '<i class="fas fa-circle-notch animate-spin mr-2"></i> Conectado ao servidor - aguardando QR Code...';
+            });
+
+            socket.on('disconnect', () => {
+                console.log('Desconectado do servidor Socket.IO');
+                document.getElementById('connection-status').innerHTML = 
+                    '<i class="fas fa-exclamation-triangle mr-2"></i> Desconectado do servidor - tentando reconectar...';
+            });
+
+            socket.on('connect_error', (err) => {
+                console.error('Erro de conexão:', err);
+                document.getElementById('connection-status').innerHTML = 
+                    '<i class="fas fa-exclamation-triangle mr-2"></i> Erro de conexão: ' + err.message;
+            });
+
+            // Handler para receber o QR Code
+            socket.on('qr', (url) => {
+                console.log('QR Code recebido:', url ? 'imagem recebida' : 'null');
+                const qrImg = document.getElementById('qrcode');
+                const statusDiv = document.getElementById('connection-status');
+                
+                if (url) {
+                    qrImg.src = url;
+                    qrImg.classList.remove('hidden');
+                    statusDiv.innerHTML = '<i class="fas fa-qrcode mr-2"></i> Escaneie o QR Code no WhatsApp';
+                    statusDiv.className = 'mb-4 p-3 rounded-lg bg-blue-100 text-blue-800 text-center';
+                } else {
+                    qrImg.classList.add('hidden');
+                }
+            });
+
+            // Handler para atualizações de status
+            socket.on('status', (message) => {
+                console.log('Status atualizado:', message);
+                const statusDiv = document.getElementById('connection-status');
+                statusDiv.innerHTML = `<i class="fas fa-info-circle mr-2"></i> ${message}`;
+                
+                if (message.includes('Conectado')) {
+                    statusDiv.className = 'mb-4 p-3 rounded-lg bg-green-100 text-green-800 text-center';
+                } else if (message.includes('Desconectado') || message.includes('Erro')) {
+                    statusDiv.className = 'mb-4 p-3 rounded-lg bg-red-100 text-red-800 text-center';
+                } else {
+                    statusDiv.className = 'mb-4 p-3 rounded-lg bg-blue-100 text-blue-800 text-center';
+                }
+            });
+
+            // Solicita o QR Code novamente se não receber em 3 segundos
+            setTimeout(() => {
+                if (!document.getElementById('qrcode').src) {
+                    console.log('Solicitando QR Code...');
+                    socket.emit('request_qr');
+                }
+            }, 3000);
+        </script>
+    </div>
 </body>
-
 </html>
