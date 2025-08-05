@@ -2,20 +2,19 @@ require('dotenv').config();
 const { Client } = require('whatsapp-web.js');
 const { handleMessage } = require('./messageHandler');
 const dbConnect = require('./services/database');
-const { startServer } = require('./server'); // Importamos o servidor
+const { startServer } = require('./server');
+const menuService = require('./services/menuService'); // Adicione esta linha
 
 // Inicializações
 dbConnect();
 const client = new Client();
 
-// Configuração do WhatsApp Client
 client.on('ready', () => {
   console.log('✅ Bot conectado ao WhatsApp');
+  menuService.initializeDefaultMenus(); // Inicializa menus padrão
 });
 
 client.on('message', async msg => handleMessage(client, msg));
 
-// Inicia tanto o servidor web quanto o WhatsApp client
-startServer(client); // Passamos o client para o servidor
-
+startServer(client);
 client.initialize();
