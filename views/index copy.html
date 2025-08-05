@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chatbot WhatsApp</title>
+  <link rel="stylesheet" href="css/styles.css">
+  <!-- Adicione Font Awesome para ícones (ou use SVG) -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+
+<body>
+  <div class="container">
+    <h1>Conectar WhatsApp Bot</h1>
+    <div id="status" class="status">Aguardando QR Code...</div>
+
+    <!-- Container do QR Code (visível inicialmente) -->
+    <div id="qrcode-container">
+      <img id="qrcode" src="" alt="QR Code para conexão">
+    </div>
+
+    <!-- Container do Ícone de Sucesso (oculto inicialmente) -->
+    <div id="success-container" class="hidden">
+      <i class="fas fa-check-circle success-icon"></i>
+      <p class="success-message">Conectado com sucesso!</p>
+      <div class="instructions">
+        <p>O bot está pronto para uso.</p>
+        <p>Feche esta página ou aguarde novas mensagens.</p>
+      </div>
+    </div>
+
+    <div class="instructions">
+      <p>1. Abra o WhatsApp no seu celular</p>
+      <p>2. Toque em <strong>Menu → Dispositivos conectados</strong></p>
+      <p>3. Escaneie o QR Code acima</p>
+    </div>
+  </div>
+  <script src="socket.io/socket.io.js"></script>
+  <script src="js/app.js"></script>
+</body>
+
+</html>

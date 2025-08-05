@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Painel Admin</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-100">
+  <div class="container mx-auto p-4">
+    <h1 class="text-2xl font-bold mb-6">Configuração do Chatbot</h1>
+    
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <!-- Card Fluxos -->
+      <div class="bg-white p-4 rounded shadow">
+        <h2 class="text-xl font-semibold mb-4">Fluxos de Conversa</h2>
+        <div id="flows-list" class="mb-4">
+          <!-- Lista de fluxos será carregada via AJAX -->
+        </div>
+        <button onclick="openFlowModal()" class="bg-green-500 text-white px-4 py-2 rounded">
+          Novo Fluxo
+        </button>
+      </div>
+      
+      <!-- Card Conexão WhatsApp -->
+      <div class="bg-white p-4 rounded shadow">
+        <h2 class="text-xl font-semibold mb-4">Conexão WhatsApp</h2>
+        <div id="qrcode-container" class="mb-4">
+          <p class="text-gray-600">Escaneie o QR Code para conectar</p>
+          <img id="qrcode" class="mx-auto my-4" src="" alt="QR Code">
+        </div>
+        <div id="connection-status" class="p-2 rounded bg-yellow-100 text-yellow-800">
+          Aguardando conexão...
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal para edição de fluxos -->
+  <div id="flow-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+    <div class="bg-white p-6 rounded-lg w-full max-w-md">
+      <h3 class="text-lg font-bold mb-4">Editar Fluxo</h3>
+      <form id="flow-form">
+        <input type="hidden" id="flow-id">
+        <div class="mb-4">
+          <label class="block mb-2">Gatilho (palavra-chave ou "menu")</label>
+          <input type="text" id="trigger" class="w-full p-2 border rounded">
+        </div>
+        <div class="mb-4">
+          <label class="block mb-2">Tipo de Resposta</label>
+          <select id="response-type" class="w-full p-2 border rounded">
+            <option value="text">Texto</option>
+            <option value="menu">Menu</option>
+          </select>
+        </div>
+        <div class="mb-4">
+          <label class="block mb-2">Conteúdo</label>
+          <textarea id="content" class="w-full p-2 border rounded" rows="4"></textarea>
+        </div>
+        <div class="flex justify-end">
+          <button type="button" onclick="closeFlowModal()" class="mr-2 px-4 py-2 border rounded">
+            Cancelar
+          </button>
+          <button type="submit" class="bg-blue-500 text-white px-4 py-2 rounded">
+            Salvar
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="/js/admin.js"></script>
+</body>
+</html>
