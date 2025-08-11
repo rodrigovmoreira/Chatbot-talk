@@ -2,9 +2,9 @@
 const mongoose = require('mongoose');
 
 const messageSchema = new mongoose.Schema({
-  phone: { type: String, required: true },
-  role: { type: String, enum: ['user', 'bot'], required: true },
-  content: { type: String, required: true },
+  phone: String,
+  role: String,
+  content: String,
   timestamp: { type: Date, default: Date.now }
 });
 
@@ -14,8 +14,4 @@ async function saveMessage(phone, role, content) {
   await Message.create({ phone, role, content });
 }
 
-async function getLastMessages(phone, limit = 15) {
-  return await Message.find({ phone }).sort({ timestamp: -1 }).limit(limit).lean();
-}
-
-module.exports = { saveMessage, getLastMessages };
+module.exports = { saveMessage };

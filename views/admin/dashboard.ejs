@@ -4,127 +4,107 @@
     <title>Painel Admin</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        .qrcode-container {
-            width: 250px;
-            height: 250px;
-            margin: 0 auto;
-        }
-        .qrcode-container img {
-            width: 100%;
-            height: 100%;
-            object-fit: contain;
-        }
-        .animate-spin {
-            animation: spin 1s linear infinite;
-        }
-        @keyframes spin {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
-        }
-    </style>
 </head>
 <body class="bg-gray-100 min-h-screen">
     <div class="container mx-auto p-4">
-        <!-- Cabeçalho -->
         <div class="flex justify-between items-center mb-8">
             <h1 class="text-2xl font-bold text-gray-800">
                 <i class="fas fa-cog mr-2 text-blue-500"></i>Painel Administrativo
             </h1>
-            <a href="/" class="text-blue-500 hover:text-blue-700">
-                <i class="fas fa-arrow-left mr-1"></i>Voltar
-            </a>
-        </div>
-
-        <!-- Seção do QR Code -->
-        <div class="bg-white p-6 rounded-lg shadow-md mb-8">
-            <h2 class="text-xl font-semibold mb-4 text-gray-700">
-                <i class="fas fa-qrcode mr-2 text-green-500"></i>Conexão WhatsApp
-            </h2>
-
-            <div id="connection-status" class="mb-4 p-3 rounded-lg bg-yellow-100 text-yellow-800 text-center">
-                <i class="fas fa-circle-notch animate-spin mr-2"></i> Aguardando QR Code...
-            </div>
-
-            <div class="qrcode-container bg-white p-4 border-2 border-dashed border-gray-300 rounded-lg mb-4">
-                <img id="qrcode" src="" alt="QR Code para conexão" class="hidden">
-            </div>
-
-            <div class="text-center text-sm text-gray-500">
-                Escaneie este QR Code no WhatsApp > Dispositivos conectados
+            <div>
+                <a href="/admin/flows" class="bg-green-500 text-white px-4 py-2 rounded mr-2">
+                    <i class="fas fa-stream mr-1"></i>Fluxos
+                </a>
+                <a href="/logout" class="bg-red-500 text-white px-4 py-2 rounded">
+                    <i class="fas fa-sign-out-alt mr-1"></i>Sair
+                </a>
             </div>
         </div>
 
-        <!-- Resto do seu conteúdo admin... -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- Seção Conexão WhatsApp -->
+            <div class="bg-white p-6 rounded-lg shadow-md">
+                <h2 class="text-xl font-semibold mb-4 text-gray-700">
+                    <i class="fas fa-qrcode mr-2 text-green-500"></i>Conexão WhatsApp
+                </h2>
 
-        <script src="/socket.io/socket.io.js"></script>
-        <script>
-            // Conecta ao namespace /admin
-            const socket = io('/admin', {
-                reconnection: true,
-                reconnectionAttempts: Infinity,
-                reconnectionDelay: 1000,
-                reconnectionDelayMax: 5000
-            });
+                <div id="connection-status" class="mb-4 p-3 rounded-lg bg-yellow-100 text-yellow-800 text-center">
+                    <i class="fas fa-circle-notch animate-spin mr-2"></i> Aguardando QR Code...
+                </div>
 
-            // Logs para debug
-            socket.on('connect', () => {
-                console.log('Conectado ao servidor Socket.IO');
-                document.getElementById('connection-status').innerHTML = 
-                    '<i class="fas fa-circle-notch animate-spin mr-2"></i> Conectado ao servidor - aguardando QR Code...';
-            });
+                <div class="qrcode-container bg-white p-4 border-2 border-dashed border-gray-300 rounded-lg mb-4">
+                    <img id="qrcode" src="" alt="QR Code para conexão" class="hidden mx-auto" style="max-width: 250px;">
+                </div>
 
-            socket.on('disconnect', () => {
-                console.log('Desconectado do servidor Socket.IO');
-                document.getElementById('connection-status').innerHTML = 
-                    '<i class="fas fa-exclamation-triangle mr-2"></i> Desconectado do servidor - tentando reconectar...';
-            });
+                <div class="text-center text-sm text-gray-500">
+                    Escaneie este QR Code no WhatsApp > Dispositivos conectados
+                </div>
+            </div>
 
-            socket.on('connect_error', (err) => {
-                console.error('Erro de conexão:', err);
-                document.getElementById('connection-status').innerHTML = 
-                    '<i class="fas fa-exclamation-triangle mr-2"></i> Erro de conexão: ' + err.message;
-            });
-
-            // Handler para receber o QR Code
-            socket.on('qr', (url) => {
-                console.log('QR Code recebido:', url ? 'imagem recebida' : 'null');
-                const qrImg = document.getElementById('qrcode');
-                const statusDiv = document.getElementById('connection-status');
+            <!-- Seção Estatísticas -->
+            <div class="bg-white p-6 rounded-lg shadow-md">
+                <h2 class="text-xl font-semibold mb-4 text-gray-700">
+                    <i class="fas fa-chart-bar mr-2 text-blue-500"></i>Estatísticas
+                </h2>
                 
-                if (url) {
-                    qrImg.src = url;
-                    qrImg.classList.remove('hidden');
-                    statusDiv.innerHTML = '<i class="fas fa-qrcode mr-2"></i> Escaneie o QR Code no WhatsApp';
-                    statusDiv.className = 'mb-4 p-3 rounded-lg bg-blue-100 text-blue-800 text-center';
-                } else {
-                    qrImg.classList.add('hidden');
-                }
-            });
-
-            // Handler para atualizações de status
-            socket.on('status', (message) => {
-                console.log('Status atualizado:', message);
-                const statusDiv = document.getElementById('connection-status');
-                statusDiv.innerHTML = `<i class="fas fa-info-circle mr-2"></i> ${message}`;
-                
-                if (message.includes('Conectado')) {
-                    statusDiv.className = 'mb-4 p-3 rounded-lg bg-green-100 text-green-800 text-center';
-                } else if (message.includes('Desconectado') || message.includes('Erro')) {
-                    statusDiv.className = 'mb-4 p-3 rounded-lg bg-red-100 text-red-800 text-center';
-                } else {
-                    statusDiv.className = 'mb-4 p-3 rounded-lg bg-blue-100 text-blue-800 text-center';
-                }
-            });
-
-            // Solicita o QR Code novamente se não receber em 3 segundos
-            setTimeout(() => {
-                if (!document.getElementById('qrcode').src) {
-                    console.log('Solicitando QR Code...');
-                    socket.emit('request_qr');
-                }
-            }, 3000);
-        </script>
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="bg-blue-50 p-4 rounded-lg">
+                        <div class="text-blue-500 text-3xl font-bold mb-1" id="total-messages">0</div>
+                        <div class="text-gray-600 text-sm">Mensagens hoje</div>
+                    </div>
+                    <div class="bg-green-50 p-4 rounded-lg">
+                        <div class="text-green-500 text-3xl font-bold mb-1" id="active-chats">0</div>
+                        <div class="text-gray-600 text-sm">Chats ativos</div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io('/admin');
+        
+        // Conexão WhatsApp
+        socket.on('qr', (url) => {
+            const qrImg = document.getElementById('qrcode');
+            const statusDiv = document.getElementById('connection-status');
+            
+            if (url) {
+                qrImg.src = url;
+                qrImg.classList.remove('hidden');
+                statusDiv.innerHTML = '<i class="fas fa-qrcode mr-2"></i> Escaneie o QR Code no WhatsApp';
+                statusDiv.className = 'mb-4 p-3 rounded-lg bg-blue-100 text-blue-800 text-center';
+            }
+        });
+
+        socket.on('status', (message) => {
+            const statusDiv = document.getElementById('connection-status');
+            statusDiv.innerHTML = `<i class="fas fa-info-circle mr-2"></i> ${message}`;
+            
+            if (message.includes('Conectado')) {
+                statusDiv.className = 'mb-4 p-3 rounded-lg bg-green-100 text-green-800 text-center';
+            } else if (message.includes('Desconectado') || message.includes('Erro')) {
+                statusDiv.className = 'mb-4 p-3 rounded-lg bg-red-100 text-red-800 text-center';
+            }
+        });
+
+        // Carrega estatísticas
+        async function loadStats() {
+            try {
+                const response = await fetch('/api/stats');
+                const data = await response.json();
+                
+                document.getElementById('total-messages').textContent = data.todayMessages;
+                document.getElementById('active-chats').textContent = data.activeChats;
+            } catch (error) {
+                console.error('Erro ao carregar estatísticas:', error);
+            }
+        }
+
+        // Atualiza estatísticas a cada 30 segundos
+        loadStats();
+        setInterval(loadStats, 30000);
+    </script>
 </body>
 </html>

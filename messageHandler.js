@@ -1,81 +1,100 @@
-// === messageHandler.js ===
-const { saveMessage, getLastMessages } = require('./services/message');
-const { getOrCreateSession, setSessionState } = require('./services/session');
+const { saveMessage } = require('./services/message');
 const { simulateTyping } = require('./utils/chatUtils');
-const { generateAIResponse } = require('./services/ai');
-const menuService = require('./services/menuService');
+const Flow = require('./models/Flow');
 
-// Configurações
-const MAX_HISTORY = 5;
-const ERROR_MESSAGE = '⚠️ Ops! Tive um problema. Pode tentar novamente?';
+const ERROR_MESSAGE = '⚠️ Ops! Tive um problema. Tente novamente.';
+const DEFAULT_RESPONSE = '❌ Opção inválida. Por favor, tente novamente.';
+const MAIN_MENU_TRIGGER = 'menu';
+
+// Cache de sessões dos usuários
+const userSessions = {};
+
+async function getMainMenu() {
+  try {
+    const menuFlow = await Flow.findOne({ trigger: MAIN_MENU_TRIGGER });
+    if (!menuFlow) {
+      return {
+        text: '🤖 *Menu Principal* 🤖\n\n1. Falar com atendente\n2. Informações\n3. Suporte\n\nDigite o número da opção:',
+        options: {
+          '1': 'Você escolheu falar com atendente',
+          '2': 'Você escolheu informações',
+          '3': 'Você escolheu suporte'
+        }
+      };
+    }
+    
+    return {
+      text: menuFlow.content,
+      options: JSON.parse(menuFlow.options || '{}')
+    };
+  } catch (error) {
+    console.error('Erro ao carregar menu:', error);
+    return {
+      text: '🤖 *Menu Principal* 🤖\n\n1. Falar com atendente\n2. Informações\n3. Suporte\n\nDigite o número da opção:',
+      options: {
+        '1': 'Você escolheu falar com atendente',
+        '2': 'Você escolheu informações',
+        '3': 'Você escolheu suporte'
+      }
+    };
+  }
+}
 
 async function handleMessage(client, msg) {
-  if (!msg?.from || !msg?.body || !msg.from.endsWith('@c.us')) {
-    return;
-  }
+  if (!msg?.from || !msg?.body || !msg.from.endsWith('@c.us')) return;
 
   try {
     const chat = await msg.getChat();
     const userMessage = msg.body.trim();
     const phone = msg.from;
-    
+
     if (!userMessage) return;
 
-    const session = await getOrCreateSession(phone);
+    // Salva mensagem do usuário
+    await saveMessage(phone, 'user', userMessage);
+
+    // Inicializa sessão se não existir
+    if (!userSessions[phone]) {
+      userSessions[phone] = {
+        inMenu: true,
+        currentMenu: 'main'
+      };
+    }
+
     let response = '';
-    let newState = null;
+    const session = userSessions[phone];
 
-    // 1. Verifica se está em modo de conversa livre
-    if (session.state === 'FREE_CHAT') {
-      if (userMessage.toLowerCase() === 'sair') {
-        response = await menuService.getMainMenu();
-        newState = null;
+    // Se estiver no menu principal
+    if (session.inMenu) {
+      const menu = await getMainMenu();
+      
+      if (menu.options[userMessage]) {
+        // Opção válida selecionada
+        response = menu.options[userMessage] + '\n\nDigite *voltar* para retornar ao menu.';
+        session.inMenu = false;
       } else {
-        const history = await getLastMessages(phone, MAX_HISTORY);
-        const context = history
-          .reverse()
-          .map(m => `${m.role === 'user' ? 'Usuário' : 'Bot'}: ${m.content}`)
-          .join('\n');
-
-        response = await generateAIResponse(userMessage, context) || 
-                  "🤖 Não entendi. Pode reformular?";
-        newState = 'FREE_CHAT';
+        // Opção inválida
+        response = DEFAULT_RESPONSE + '\n\n' + menu.text;
       }
-    } 
-    // 2. Se não está em FREE_CHAT, sempre começa com o menu
-    else {
-      // Verifica se é uma opção de menu válida (1-5)
-      if (/^[1-5]$/.test(userMessage)) {
-        switch(userMessage) {
-          case '5':
-            response = "💡 *Modo conversa livre ativado*:\n\n" +
-                      "Pergunte qualquer coisa! Digite *sair* para voltar ao menu.";
-            newState = 'FREE_CHAT';
-            break;
-          default:
-            response = await menuService.getMenuForOption(userMessage);
-        }
+    } else {
+      // Fora do menu - verifica se quer voltar
+      if (userMessage.toLowerCase() === 'voltar') {
+        const menu = await getMainMenu();
+        response = menu.text;
+        session.inMenu = true;
       } else {
-        // Se não for opção válida, mostra menu com mensagem de ajuda
-        response = "⚠️ Por favor, escolha uma opção válida:\n\n" + 
-                  await menuService.getMainMenu();
+        response = 'Opção inválida. Digite *voltar* para retornar ao menu principal.';
       }
     }
 
-    // Atualiza estado e envia resposta
-    await setSessionState(phone, newState);
-    await saveMessage(phone, 'user', userMessage);
+    // Envia a resposta
     await simulateTyping(chat);
     await client.sendMessage(phone, response);
     await saveMessage(phone, 'bot', response);
 
   } catch (error) {
-    console.error('Erro no handleMessage:', error);
-    try {
-      await client.sendMessage(msg.from, ERROR_MESSAGE);
-    } catch (sendError) {
-      console.error('Falha ao enviar mensagem de erro:', sendError);
-    }
+    console.error('Erro no handler de mensagens:', error);
+    await client.sendMessage(msg.from, ERROR_MESSAGE);
   }
 }
 

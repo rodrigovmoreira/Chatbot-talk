@@ -1,3 +1,4 @@
+require('dotenv').config();
 const express = require('express');
 const socketIO = require('socket.io');
 const qrcode = require('qrcode');
@@ -6,6 +7,9 @@ const http = require('http');
 const bodyParser = require('body-parser');
 const session = require('express-session');
 const MongoStore = require('connect-mongo');
+const mongoose = require('mongoose');
+const crypto = require('crypto');
+const Flow = require('./models/Flow');
 
 function startServer(whatsappClient) {
   const app = express();
@@ -13,18 +17,30 @@ function startServer(whatsappClient) {
   const io = socketIO(server);
   const PORT = process.env.PORT || 3000;
 
+  // Conexão com o MongoDB
+  mongoose.connect(process.env.MONGO_URI || 'mongodb://localhost:27017/chatbot', {
+    useNewUrlParser: true,
+    useUnifiedTopology: true
+  });
+
   // Configurações de middleware
   app.use(bodyParser.json());
   app.use(bodyParser.urlencoded({ extended: true }));
   app.use(session({
-    secret: process.env.SESSION_SECRET || 'secret123',
+    secret: process.env.SESSION_SECRET || crypto.randomBytes(32).toString('hex'),
     resave: false,
-    saveUninitialized: true,
+    saveUninitialized: false,
     store: MongoStore.create({
-      mongoUrl: process.env.MONGO_URI,
-      collectionName: 'sessions'
+      mongoUrl: process.env.MONGO_URI || 'mongodb://localhost:27017/chatbot',
+      collectionName: 'sessions',
+      autoRemove: 'interval',
+      autoRemoveInterval: 10 // Limpa sessões a cada 10 minutos
     }),
-    cookie: { maxAge: 1000 * 60 * 60 * 24 } // 1 dia
+    cookie: { 
+      maxAge: 1000 * 60 * 60 * 24, // 1 dia
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production'
+    }
   }));
 
   // Configurações de views e arquivos estáticos
@@ -36,9 +52,10 @@ function startServer(whatsappClient) {
   let lastQr = null;
 
   // Função para gerar e emitir QR Code
-  const generateAndEmitQr = async (io, qr) => {
+  const generateAndEmitQr = async (qr) => {
     try {
       const qrImageUrl = await qrcode.toDataURL(qr);
+      lastQr = qr;
       io.of('/admin').emit('qr', qrImageUrl);
       io.of('/admin').emit('status', 'Escaneie o QR Code no WhatsApp');
     } catch (error) {
@@ -46,36 +63,30 @@ function startServer(whatsappClient) {
     }
   };
 
-  // No handler do WhatsApp Client:
+  // Handlers do WhatsApp Client
   whatsappClient.on('qr', async (qr) => {
     console.log('Evento QR recebido do WhatsApp Web');
-    try {
-      const qrImageUrl = await qrcode.toDataURL(qr);
-      io.of('/admin').emit('qr', qrImageUrl);
-      io.of('/admin').emit('status', 'Escaneie o QR Code no WhatsApp');
-    } catch (error) {
-      console.error('Erro ao gerar QR Code:', error);
-      io.of('/admin').emit('status', 'Erro ao gerar QR Code');
-    }
+    await generateAndEmitQr(qr);
   });
 
-  // Adicione este handler para o namespace admin
+  whatsappClient.on('ready', () => {
+    console.log('✅ WhatsApp conectado!');
+    io.of('/admin').emit('status', 'Conectado com sucesso!');
+    io.of('/admin').emit('qr', null);
+  });
+
+  whatsappClient.on('disconnected', () => {
+    console.log('❌ WhatsApp desconectado');
+    io.of('/admin').emit('status', 'Desconectado - Reinicie o servidor');
+  });
+
+  // Configuração do Socket.IO namespace admin
   io.of('/admin').on('connection', (socket) => {
     console.log('Cliente conectado ao namespace /admin');
 
-    // Responde a solicitações de QR Code
     socket.on('request_qr', () => {
-      console.log('Cliente solicitou QR Code');
       if (lastQr) {
-        qrcode.toDataURL(lastQr)
-          .then(url => {
-            socket.emit('qr', url);
-            socket.emit('status', 'Escaneie o QR Code no WhatsApp');
-          })
-          .catch(err => {
-            console.error('Erro ao regenerar QR:', err);
-            socket.emit('status', 'Erro ao gerar QR Code');
-          });
+        generateAndEmitQr(lastQr);
       }
     });
 
@@ -84,15 +95,13 @@ function startServer(whatsappClient) {
     });
   });
 
-  whatsappClient.on('ready', () => {
-    console.log('✅ WhatsApp conectado!');
-    io.of('/admin').emit('status', 'Conectado com sucesso!');
-  });
-
-  whatsappClient.on('disconnected', () => {
-    console.log('❌ WhatsApp desconectado');
-    io.of('/admin').emit('status', 'Desconectado - Reinicie o servidor');
-  });
+  // Middleware para verificar autenticação
+  const authMiddleware = (req, res, next) => {
+    if (!req.session.user) {
+      return res.redirect('/login');
+    }
+    next();
+  };
 
   // Rotas públicas
   app.get('/', (req, res) => {
@@ -101,24 +110,39 @@ function startServer(whatsappClient) {
 
   // Rotas de autenticação
   app.get('/login', (req, res) => {
+    if (req.session.user) {
+      return res.redirect('/admin');
+    }
     res.render('admin/login', { error: req.query.error });
   });
 
   app.post('/login', (req, res) => {
     if (req.body.password === process.env.ADMIN_PASSWORD) {
-      req.session.user = { name: "Admin" };
-      return res.redirect('/admin');
+      req.session.user = { 
+        name: "Admin",
+        sessionId: crypto.randomBytes(16).toString('hex')
+      };
+      
+      req.session.save(err => {
+        if (err) {
+          console.error('Erro ao salvar sessão:', err);
+          return res.redirect('/login?error=1');
+        }
+        res.redirect('/admin');
+      });
+    } else {
+      res.redirect('/login?error=1');
     }
-    res.redirect('/login?error=1');
   });
 
-  // Middleware para proteger rotas admin
-  const authMiddleware = (req, res, next) => {
-    if (!req.session.user) {
-      return res.redirect('/login');
-    }
-    next();
-  };
+  app.get('/logout', (req, res) => {
+    req.session.destroy(err => {
+      if (err) {
+        console.error('Erro ao destruir sessão:', err);
+      }
+      res.redirect('/login');
+    });
+  });
 
   // Rotas administrativas protegidas
   app.get('/admin', authMiddleware, (req, res) => {
@@ -128,42 +152,27 @@ function startServer(whatsappClient) {
     });
   });
 
-  // API para gerenciar fluxos (protegida)
-  app.get('/api/flows', authMiddleware, async (req, res) => {
+  // Rotas para gerenciamento de fluxos
+  app.get('/admin/flows', authMiddleware, async (req, res) => {
     try {
-      const flows = await Flow.find();
-      res.json(flows);
+      const flows = await mongoose.model('Flow').find().sort({ priority: -1 });
+      res.render('admin/flows', { 
+        flows,
+        user: req.session.user
+      });
     } catch (error) {
-      res.status(500).json({ error: 'Erro ao buscar fluxos' });
+      console.error('Erro ao carregar fluxos:', error);
+      res.status(500).render('admin/error', { 
+        error: 'Erro ao carregar fluxos',
+        user: req.session.user
+      });
     }
-  });
-
-  app.post('/api/flows', authMiddleware, async (req, res) => {
-    try {
-      const newFlow = await Flow.create(req.body);
-      res.json(newFlow);
-    } catch (error) {
-      res.status(400).json({ error: 'Erro ao criar fluxo' });
-    }
-  });
-
-  // Configuração do Socket.IO namespaces
-  const adminNamespace = io.of('/admin');
-
-  adminNamespace.on('connection', (socket) => {
-    console.log('Novo cliente conectado ao namespace /admin');
-    if (lastQr) {
-      generateAndEmitQr(adminNamespace, lastQr);
-    }
-
-    socket.on('disconnect', () => {
-      console.log('Cliente desconectado do namespace /admin');
-    });
   });
 
   // Inicia o servidor
   server.listen(PORT, () => {
     console.log(`🌐 Servidor web rodando em http://localhost:${PORT}`);
+    console.log(`🔒 Painel admin em http://localhost:${PORT}/admin`);
   });
 
   return server;
