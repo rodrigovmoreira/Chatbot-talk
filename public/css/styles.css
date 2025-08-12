@@ -27,9 +27,11 @@ h1 {
 #qrcode-container {
     margin: 20px 0;
     padding: 20px;
+    width: 200px; height: 200px;
     background: white;
     border: 1px solid #ddd;
     border-radius: 8px;
+    text-align: center;
 }
 
 #qrcode {
