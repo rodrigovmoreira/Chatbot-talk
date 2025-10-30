@@ -6,6 +6,7 @@ const path = require('path');
 const http = require('http');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
+const cookieParser = require('cookie-parser');
 const SystemUser = require('./models/SystemUser');
 const Contact = require('./models/Contact');
 const BusinessConfig = require('./models/BusinessConfig');
@@ -20,20 +21,43 @@ function startServer(whatsappClient) {
 
   // Middlewares
   app.use(express.json());
+  app.use(cookieParser());
   app.use(express.static(path.join(__dirname, 'public')));
   app.set('view engine', 'ejs');
   app.set('views', path.join(__dirname, 'views'));
 
-  // Middleware de autenticação
+  // Verificar se JWT_SECRET existe
+  if (!process.env.JWT_SECRET) {
+    console.error('💥 ERRO CRÍTICO: JWT_SECRET não definido no .env');
+    process.exit(1);
+  }
+
+  // ✅ CORREÇÃO: Middleware para verificar se já está autenticado (para login)
+  const redirectIfAuthenticated = (req, res, next) => {
+    const token = req.cookies.auth_token;
+    if (token) {
+      jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
+        if (!err) {
+          console.log('✅ Usuário já autenticado, redirecionando para dashboard');
+          return res.redirect('/admin/dashboard');
+        }
+        next();
+      });
+    } else {
+      next();
+    }
+  };
+
+  // Middleware de autenticação para APIs (header)
   const authenticateToken = (req, res, next) => {
-    const token = req.headers['authorization']?.split(' ')[1];
-    console.log('🔐 Verificando token:', token ? 'Token presente' : 'Token ausente');
+    const token = req.cookies.auth_token || req.headers['authorization']?.split(' ')[1];
+    console.log('🔐 Verificando token para API:', token ? 'Token presente' : 'Token ausente');
     
     if (!token) {
       return res.status(401).json({ message: 'Token de acesso necessário' });
     }
 
-    jwt.verify(token, process.env.JWT_SECRET || 'seu_jwt_secret', (err, user) => {
+    jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
       if (err) {
         console.log('❌ Token inválido:', err.message);
         return res.status(403).json({ message: 'Token inválido' });
@@ -44,13 +68,34 @@ function startServer(whatsappClient) {
     });
   };
 
+  // Middleware para autenticação de páginas EJS (via cookie) - APENAS PARA DASHBOARD
+  const authenticateCookie = (req, res, next) => {
+    const token = req.cookies.auth_token;
+    console.log('🔐 Verificando token (Cookie):', token ? 'Token presente' : 'Token ausente');
+    
+    if (!token) {
+      console.log('❌ Token ausente para página, redirecionando para login');
+      return res.redirect('/admin/login');
+    }
+
+    jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
+      if (err) {
+        console.log('❌ Token inválido para página:', err.message);
+        return res.redirect('/admin/login');
+      }
+      req.user = user;
+      console.log('✅ Token válido para página, usuário:', user.userId);
+      next();
+    });
+  };
+
   let lastQr = null;
 
   // Rotas de Autenticação
   
   app.post('/api/register', async (req, res) => {
     try {
-      console.log('📝 Iniciando registro:', req.body);
+      console.log('📝 Iniciando registro:', { ...req.body, password: '***' });
       const { name, email, password, company } = req.body;
 
       // Validação básica
@@ -97,9 +142,17 @@ function startServer(whatsappClient) {
 
       const token = jwt.sign(
         { userId: user._id },
-        process.env.JWT_SECRET || 'seu_jwt_secret',
+        process.env.JWT_SECRET,
         { expiresIn: '7d' }
       );
+
+      // ✅ SETAR COOKIE
+      res.cookie('auth_token', token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        maxAge: 7 * 24 * 60 * 60 * 1000,
+        sameSite: 'lax'
+      });
 
       console.log('✅ Registro concluído com sucesso para:', email);
       res.status(201).json({
@@ -139,7 +192,7 @@ function startServer(whatsappClient) {
       }
 
       console.log('🔑 Verificando senha...');
-      const validPassword = await user.correctPassword(password, user.password);
+      const validPassword = await user.correctPassword(password);
       if (!validPassword) {
         console.log('❌ Senha incorreta para:', email);
         return res.status(400).json({ message: 'Credenciais inválidas' });
@@ -147,9 +200,17 @@ function startServer(whatsappClient) {
 
       const token = jwt.sign(
         { userId: user._id },
-        process.env.JWT_SECRET || 'seu_jwt_secret',
+        process.env.JWT_SECRET,
         { expiresIn: '7d' }
       );
+
+      // ✅ SETAR COOKIE
+      res.cookie('auth_token', token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        maxAge: 7 * 24 * 60 * 60 * 1000,
+        sameSite: 'lax'
+      });
 
       console.log('✅ Login bem-sucedido para:', email);
       res.json({
@@ -169,6 +230,13 @@ function startServer(whatsappClient) {
         error: error.message 
       });
     }
+  });
+
+  // ✅ Rota de logout
+  app.post('/api/logout', (req, res) => {
+    console.log('🚪 Realizando logout...');
+    res.clearCookie('auth_token');
+    res.json({ message: 'Logout realizado com sucesso' });
   });
 
   // Rotas do Business Config
@@ -209,26 +277,24 @@ function startServer(whatsappClient) {
     }
   });
 
-  // Rotas de visualização - SEMPRE redirecionar para login
+  // ✅ CORREÇÃO: Rotas de visualização - LOGIN SEM autenticação
   app.get('/', (req, res) => {
     console.log('🏠 Redirecionando raiz para login...');
     res.redirect('/admin/login');
   });
 
-  app.get('/admin/login', (req, res) => {
+  // ✅ LOGIN: SEM authenticateCookie, COM redirectIfAuthenticated
+  app.get('/admin/login', redirectIfAuthenticated, (req, res) => {
     console.log('🔐 Servindo página de login...');
     res.render('admin/login', { title: 'Login - ChatBot Platform' });
   });
 
-  app.get('/admin/dashboard', authenticateToken, (req, res) => {
+  // ✅ DASHBOARD: COM authenticateCookie
+  app.get('/admin/dashboard', authenticateCookie, (req, res) => {
     console.log('📊 Servindo dashboard para usuário:', req.user.userId);
-    res.render('admin/dashboard', { title: 'Dashboard - ChatBot Platform' });
-  });
-
-  // Rota antiga do WhatsApp - redirecionar para login
-  app.get('/whatsapp', (req, res) => {
-    console.log('🔀 Redirecionando /whatsapp para login...');
-    res.redirect('/admin/login');
+    res.render('admin/dashboard', { 
+      title: 'Dashboard - ChatBot Platform'
+    });
   });
 
   // Socket.IO com autenticação
@@ -241,7 +307,7 @@ function startServer(whatsappClient) {
       return next(new Error('Autenticação necessária'));
     }
 
-    jwt.verify(token, process.env.JWT_SECRET || 'seu_jwt_secret', (err, decoded) => {
+    jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
       if (err) {
         console.log('❌ Token de socket inválido:', err.message);
         return next(new Error('Token inválido'));
@@ -252,7 +318,7 @@ function startServer(whatsappClient) {
     });
   });
 
-  // Manipulador de QR Code
+  // Resto do código do Socket.IO e WhatsApp permanece igual
   whatsappClient.on('qr', (qr) => {
     console.log('📱 QR Code gerado pelo WhatsApp');
     lastQr = qr;
@@ -287,16 +353,6 @@ function startServer(whatsappClient) {
   whatsappClient.on('ready', () => {
     console.log('✅ WhatsApp conectado e pronto!');
     io.emit('status', 'Conectado com sucesso!');
-  });
-
-  whatsappClient.on('disconnected', (reason) => {
-    console.log('❌ WhatsApp desconectado:', reason);
-    io.emit('status', 'Desconectado - Reinicie o servidor');
-  });
-
-  whatsappClient.on('auth_failure', (error) => {
-    console.error('💥 Falha na autenticação do WhatsApp:', error);
-    io.emit('status', 'Falha na autenticação - Recarregue a página');
   });
 
   server.listen(PORT, () => {

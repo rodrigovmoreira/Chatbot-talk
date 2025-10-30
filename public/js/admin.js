@@ -129,11 +129,24 @@ async function updateMenuOption(index, field, value) {
     }
 }
 
-function logout() {
+async function logout() {
     console.log('🚪 Realizando logout...');
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    window.location.href = '/admin/login';
+    try {
+        await fetch('/api/logout', { 
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+    } catch (error) {
+        console.error('💥 Erro no logout:', error);
+    } finally {
+        // Limpar localStorage
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        // Redirecionar para login
+        window.location.href = '/admin/login';
+    }
 }
 
 // Inicializar

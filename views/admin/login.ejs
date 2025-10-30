@@ -17,7 +17,6 @@
 
         <div id="error-message" class="error"></div>
 
-        <!-- Login Form -->
         <div id="login-tab" class="tab-content active">
             <form id="login-form">
                 <div class="form-group">
@@ -32,7 +31,6 @@
             </form>
         </div>
 
-        <!-- Register Form -->
         <div id="register-tab" class="tab-content">
             <form id="register-form">
                 <div class="form-group">
@@ -44,7 +42,7 @@
                     <input type="email" id="register-email" name="email" required>
                 </div>
                 <div class="form-group">
-                    <label for="register-company">Empresa (opcional)</label>
+                    <label for="register-company">Empresa</label>
                     <input type="text" id="register-company" name="company">
                 </div>
                 <div class="form-group">
@@ -83,7 +81,7 @@
 
         async function handleAuth(url, formData) {
             const data = Object.fromEntries(formData);
-            console.log('📤 Enviando dados para:', url, data);
+            console.log('📤 Enviando dados para:', url, { ...data, password: '***' });
             
             try {
                 const response = await fetch(url, {
@@ -100,6 +98,8 @@
                     console.log('✅ Autenticação bem-sucedida');
                     localStorage.setItem('token', result.token);
                     localStorage.setItem('user', JSON.stringify(result.user));
+                    
+                    // ✅ Redirecionamento simples - cookie já foi setado pelo servidor
                     window.location.href = '/admin/dashboard';
                 } else {
                     console.log('❌ Erro na autenticação:', result.message);
@@ -118,14 +118,6 @@
             errorDiv.style.display = 'block';
         }
 
-        // Verificar se já está logado
-        const existingToken = localStorage.getItem('token');
-        console.log('🔍 Verificando token existente:', existingToken ? 'PRESENTE' : 'AUSENTE');
-        
-        if (existingToken) {
-            console.log('🔄 Redirecionando para dashboard...');
-            window.location.href = '/admin/dashboard';
-        }
 
         console.log('✅ Página de login inicializada');
     </script>
