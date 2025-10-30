@@ -9,27 +9,43 @@
 <body>
     <div class="dashboard-container">
         <header class="dashboard-header">
-            <h1>Dashboard - <span id="business-name">Meu Negócio</span></h1>
+            <h1>Dashboard - <span id="business-name">Não quero</span></h1>
             <div class="user-actions">
-                <span id="user-greeting">Olá, Vendedor!</span>
+                <span id="user-greeting">Olá, Rodrigo!</span>
                 <button onclick="logout()" class="btn-logout">Sair</button>
             </div>
         </header>
 
         <div class="dashboard-grid">
-            <!-- Status WhatsApp -->
+            <!-- Status WhatsApp Card -->
             <div class="card">
                 <h3>Status WhatsApp</h3>
                 <div id="whatsapp-status" class="status disconnected">
                     <span>Desconectado</span>
                 </div>
+                
                 <div id="qrcode-container" class="hidden">
-                    <img id="qrcode" src="" alt="QR Code">
-                    <p>Escaneie com seu WhatsApp</p>
+                    <h4>Conectar WhatsApp</h4>
+                    <img id="qrcode" src="" alt="QR Code para conectar WhatsApp">
+                    <p>Escaneie este QR Code com seu WhatsApp</p>
+                    <div class="instructions">
+                        <p><strong>Como conectar:</strong></p>
+                        <ol>
+                            <li>Abra o WhatsApp no seu celular</li>
+                            <li>Toque em <strong>Menu → Dispositivos conectados</strong></li>
+                            <li>Toque em <strong>Conectar um dispositivo</strong></li>
+                            <li>Escaneie o QR Code acima</li>
+                        </ol>
+                    </div>
                 </div>
-                <button id="connect-btn" onclick="connectWhatsApp()" class="btn-primary">
-                    Conectar WhatsApp
-                </button>
+
+                <div id="success-container" class="hidden">
+                    <div class="success-icon">✅</div>
+                    <div class="success-message">WhatsApp Conectado!</div>
+                    <p>O bot está pronto para receber mensagens</p>
+                </div>
+
+                <button id="connect-btn" class="btn-primary" onclick="connectWhatsApp()">Conectar WhatsApp</button>
             </div>
 
             <!-- Configurações do Negócio -->
@@ -37,12 +53,12 @@
                 <h3>Configurações do Negócio</h3>
                 <form id="business-config-form">
                     <div class="form-group">
-                        <label>Nome do Negócio</label>
-                        <input type="text" id="business-name-input" required>
+                        <label for="business-name-input">Nome do Negócio</label>
+                        <input type="text" id="business-name-input" name="businessName" required>
                     </div>
                     <div class="form-group">
-                        <label>Segmento</label>
-                        <select id="business-type">
+                        <label for="business-type">Segmento</label>
+                        <select id="business-type" name="businessType">
                             <option value="varejo">Varejo</option>
                             <option value="servicos">Serviços</option>
                             <option value="restaurante">Restaurante</option>
@@ -51,8 +67,8 @@
                         </select>
                     </div>
                     <div class="form-group">
-                        <label>Mensagem de Boas-Vindas</label>
-                        <textarea id="welcome-message" rows="3"></textarea>
+                        <label for="welcome-message">Mensagem de Boas-Vindas</label>
+                        <textarea id="welcome-message" name="welcomeMessage" rows="3" placeholder="Digite a mensagem de boas-vindas para seus clientes..."></textarea>
                     </div>
                     <button type="submit" class="btn-primary">Salvar Configurações</button>
                 </form>
@@ -62,18 +78,11 @@
             <div class="card">
                 <h3>Menu de Atendimento</h3>
                 <div id="menu-options-container">
-                    <!-- Opções serão carregadas via JavaScript -->
+                    <!-- As opções serão carregadas via JavaScript -->
                 </div>
-                <button onclick="addMenuOption()" class="btn-secondary">+ Adicionar Opção</button>
-            </div>
-
-            <!-- Catálogo de Produtos -->
-            <div class="card">
-                <h3>Catálogo de Produtos</h3>
-                <div id="products-container">
-                    <!-- Produtos serão carregados via JavaScript -->
-                </div>
-                <button onclick="addProduct()" class="btn-secondary">+ Adicionar Produto</button>
+                <button onclick="addMenuOption()" class="btn-secondary" style="background: #666; color: white; padding: 10px; border: none; border-radius: 5px; cursor: pointer; width: 100%; margin-top: 10px;">
+                    + Adicionar Opção
+                </button>
             </div>
 
             <!-- Estatísticas -->
@@ -88,84 +97,12 @@
                         <span class="stat-number" id="total-customers">0</span>
                         <span class="stat-label">Clientes Atendidos</span>
                     </div>
-                    <div class="stat-item">
-                        <span class="stat-number" id="conversion-rate">0%</span>
-                        <span class="stat-label">Taxa de Conversão</span>
-                    </div>
                 </div>
             </div>
         </div>
     </div>
 
     <script src="/socket.io/socket.io.js"></script>
-    <script>
-        const token = localStorage.getItem('token');
-        const user = JSON.parse(localStorage.getItem('user') || '{}');
-        
-        if (!token) {
-            window.location.href = '/admin/login';
-        }
-
-        document.getElementById('user-greeting').textContent = `Olá, ${user.name || 'Usuário'}!`;
-
-        const socket = io({
-            auth: {
-                token: token
-            }
-        });
-
-        // Resto do código do dashboard (conexão WhatsApp, carregar configurações, etc.)
-        // ... (código JavaScript para gerenciar o dashboard)
-
-        function logout() {
-            localStorage.removeItem('token');
-            localStorage.removeItem('user');
-            window.location.href = '/admin/login';
-        }
-
-        // Carregar configurações do negócio
-        async function loadBusinessConfig() {
-            try {
-                const response = await fetch('/api/business-config', {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-                
-                if (response.ok) {
-                    const config = await response.json();
-                    document.getElementById('business-name').textContent = config.businessName;
-                    document.getElementById('business-name-input').value = config.businessName;
-                    document.getElementById('business-type').value = config.businessType;
-                    document.getElementById('welcome-message').value = config.welcomeMessage;
-                    
-                    loadMenuOptions(config.menuOptions);
-                    loadProducts(config.products);
-                }
-            } catch (error) {
-                console.error('Erro ao carregar configurações:', error);
-            }
-        }
-
-        // Carregar opções do menu
-        function loadMenuOptions(menuOptions) {
-            const container = document.getElementById('menu-options-container');
-            container.innerHTML = menuOptions.map((option, index) => `
-                <div class="menu-option">
-                    <input type="text" value="${option.keyword}" placeholder="Palavra-chave" 
-                           onchange="updateMenuOption(${index}, 'keyword', this.value)">
-                    <input type="text" value="${option.description}" placeholder="Descrição"
-                           onchange="updateMenuOption(${index}, 'description', this.value)">
-                    <textarea onchange="updateMenuOption(${index}, 'response', this.value)"
-                              placeholder="Resposta">${option.response}</textarea>
-                    <button onclick="removeMenuOption(${index})">🗑️</button>
-                </div>
-            `).join('');
-        }
-
-        // Inicializar
-        document.addEventListener('DOMContentLoaded', function() {
-            loadBusinessConfig();
-            // loadStats();
-        });
-    </script>
+    <script src="/js/admin.js"></script>
 </body>
 </html>

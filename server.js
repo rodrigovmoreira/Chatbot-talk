@@ -337,18 +337,22 @@ function startServer(whatsappClient) {
     }
   };
 
-  io.on('connection', (socket) => {
+io.on('connection', (socket) => {
     console.log('🔌 Novo cliente conectado via Socket.IO, usuário:', socket.userId);
+    console.log('🔗 Socket ID:', socket.id);
+    console.log('📡 Transporte:', socket.conn.transport.name);
     
     if (lastQr) {
-      console.log('📱 Enviando QR Code existente para novo cliente');
-      generateAndEmitQr(socket, lastQr);
+        console.log('📱 Enviando QR Code existente para novo cliente');
+        generateAndEmitQr(socket, lastQr);
+    } else {
+        console.log('ℹ️  Nenhum QR Code disponível para enviar');
     }
 
-    socket.on('disconnect', () => {
-      console.log('🔌 Cliente desconectado:', socket.userId);
+    socket.on('disconnect', (reason) => {
+        console.log('🔌 Cliente desconectado:', socket.userId, 'Razão:', reason);
     });
-  });
+});
 
   whatsappClient.on('ready', () => {
     console.log('✅ WhatsApp conectado e pronto!');
