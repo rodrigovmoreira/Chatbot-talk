@@ -42,6 +42,7 @@ npm install
 - Adicione suas credenciais:
 ```bash
 MONGO_URI=sua_string_de_conexao_mongodb
+JWT_SECRET=coloque-uma-senha-forte-aqui-para-ter-maior-proteção-de-dados
 DEEPSEEK_API_KEY=sua_chave_api
 DEEPSEEK_API_URL=https://api.deepseek.com/v1
 DEEPSEEK_MODEL=deepseek-chat

@@ -52,7 +52,7 @@ function startServer(whatsappClient) {
   const authenticateToken = (req, res, next) => {
     const token = req.cookies.auth_token || req.headers['authorization']?.split(' ')[1];
     console.log('🔐 Verificando token para API:', token ? 'Token presente' : 'Token ausente');
-    
+
     if (!token) {
       return res.status(401).json({ message: 'Token de acesso necessário' });
     }
@@ -72,7 +72,7 @@ function startServer(whatsappClient) {
   const authenticateCookie = (req, res, next) => {
     const token = req.cookies.auth_token;
     console.log('🔐 Verificando token (Cookie):', token ? 'Token presente' : 'Token ausente');
-    
+
     if (!token) {
       console.log('❌ Token ausente para página, redirecionando para login');
       return res.redirect('/admin/login');
@@ -89,10 +89,15 @@ function startServer(whatsappClient) {
     });
   };
 
-  let lastQr = null;
+  // ✅ MELHORIA: Estado global do WhatsApp
+  let whatsappState = {
+    isConnected: false,
+    isAuthenticated: false,
+    lastQr: null,
+    connectionTime: null
+  };
 
   // Rotas de Autenticação
-  
   app.post('/api/register', async (req, res) => {
     try {
       console.log('📝 Iniciando registro:', { ...req.body, password: '***' });
@@ -112,11 +117,11 @@ function startServer(whatsappClient) {
       }
 
       console.log('👤 Criando novo usuário...');
-      const user = await SystemUser.create({ 
-        name, 
-        email, 
-        password, 
-        company: company || 'Meu Negócio' 
+      const user = await SystemUser.create({
+        name,
+        email,
+        password,
+        company: company || 'Meu Negócio'
       });
       console.log('✅ Usuário criado com ID:', user._id);
 
@@ -157,19 +162,19 @@ function startServer(whatsappClient) {
       console.log('✅ Registro concluído com sucesso para:', email);
       res.status(201).json({
         token,
-        user: { 
-          id: user._id, 
-          name: user.name, 
-          email: user.email, 
-          company: user.company 
+        user: {
+          id: user._id,
+          name: user.name,
+          email: user.email,
+          company: user.company
         }
       });
 
     } catch (error) {
       console.error('💥 ERRO NO REGISTRO:', error);
-      res.status(500).json({ 
+      res.status(500).json({
         message: 'Erro interno do servidor',
-        error: error.message 
+        error: error.message
       });
     }
   });
@@ -185,7 +190,7 @@ function startServer(whatsappClient) {
 
       console.log('🔍 Buscando usuário:', email);
       const user = await SystemUser.findOne({ email }).select('+password');
-      
+
       if (!user) {
         console.log('❌ Usuário não encontrado:', email);
         return res.status(400).json({ message: 'Credenciais inválidas' });
@@ -215,19 +220,19 @@ function startServer(whatsappClient) {
       console.log('✅ Login bem-sucedido para:', email);
       res.json({
         token,
-        user: { 
-          id: user._id, 
-          name: user.name, 
-          email: user.email, 
-          company: user.company 
+        user: {
+          id: user._id,
+          name: user.name,
+          email: user.email,
+          company: user.company
         }
       });
 
     } catch (error) {
       console.error('💥 ERRO NO LOGIN:', error);
-      res.status(500).json({ 
+      res.status(500).json({
         message: 'Erro interno do servidor',
-        error: error.message 
+        error: error.message
       });
     }
   });
@@ -239,12 +244,21 @@ function startServer(whatsappClient) {
     res.json({ message: 'Logout realizado com sucesso' });
   });
 
+  // ✅ NOVA ROTA: Status do WhatsApp
+  app.get('/api/whatsapp-status', authenticateToken, (req, res) => {
+    res.json({
+      isConnected: whatsappState.isConnected,
+      isAuthenticated: whatsappState.isAuthenticated,
+      connectionTime: whatsappState.connectionTime
+    });
+  });
+
   // Rotas do Business Config
   app.get('/api/business-config', authenticateToken, async (req, res) => {
     try {
       console.log('📋 Buscando configuração para usuário:', req.user.userId);
       const config = await BusinessConfig.findOne({ userId: req.user.userId });
-      
+
       if (!config) {
         console.log('❌ Configuração não encontrada, criando padrão...');
         const newConfig = await BusinessConfig.create({
@@ -254,7 +268,7 @@ function startServer(whatsappClient) {
         });
         return res.json(newConfig);
       }
-      
+
       res.json(config);
     } catch (error) {
       console.error('💥 ERRO ao buscar configuração:', error);
@@ -292,16 +306,81 @@ function startServer(whatsappClient) {
   // ✅ DASHBOARD: COM authenticateCookie
   app.get('/admin/dashboard', authenticateCookie, (req, res) => {
     console.log('📊 Servindo dashboard para usuário:', req.user.userId);
-    res.render('admin/dashboard', { 
+    res.render('admin/dashboard', {
       title: 'Dashboard - ChatBot Platform'
     });
   });
 
-  // Socket.IO com autenticação
+  // ✅ MELHORIA: Função para emitir QR Code
+  const generateAndEmitQr = async (io, qr) => {
+    try {
+      console.log('🎨 Convertendo QR Code para imagem...');
+      const qrImageUrl = await qrcode.toDataURL(qr);
+      console.log('📤 Emitindo QR Code via Socket.IO');
+      io.emit('qr', qrImageUrl);
+      io.emit('status', 'Escaneie o QR Code no WhatsApp');
+    } catch (error) {
+      console.error('💥 ERRO ao gerar QR Code:', error);
+    }
+  };
+
+  // ✅ MELHORIA: Eventos do WhatsApp otimizados
+  whatsappClient.on('qr', (qr) => {
+    if (!whatsappState.isConnected) {
+      console.log('📱 QR Code gerado pelo WhatsApp');
+      whatsappState.lastQr = qr;
+      generateAndEmitQr(io, qr);
+    }
+  });
+
+  whatsappClient.on('authenticated', () => {
+    console.log('✅ WhatsApp autenticado!');
+    whatsappState.isAuthenticated = true;
+    io.emit('status', 'Autenticado - Conectando...');
+  });
+
+  whatsappClient.on('ready', () => {
+    console.log('✅ WhatsApp conectado e pronto!');
+    whatsappState.isConnected = true;
+    whatsappState.isAuthenticated = true;
+    whatsappState.connectionTime = new Date();
+    whatsappState.lastQr = null;
+    
+    io.emit('status', 'Conectado com sucesso! O bot está pronto para receber mensagens.');
+    io.emit('whatsapp_ready', true);
+    
+    console.log('🕒 Tempo de conexão:', whatsappState.connectionTime.toLocaleString());
+  });
+
+  whatsappClient.on('disconnected', (reason) => {
+    console.log('❌ WhatsApp desconectado:', reason);
+    whatsappState.isConnected = false;
+    whatsappState.isAuthenticated = false;
+    whatsappState.connectionTime = null;
+    
+    io.emit('status', `Desconectado: ${reason} - Reinicie o servidor`);
+    io.emit('whatsapp_ready', false);
+  });
+
+  whatsappClient.on('auth_failure', (error) => {
+    console.error('💥 Falha na autenticação do WhatsApp:', error);
+    whatsappState.isConnected = false;
+    whatsappState.isAuthenticated = false;
+    
+    io.emit('status', 'Falha na autenticação - Recarregue a página e tente novamente');
+    io.emit('whatsapp_ready', false);
+  });
+
+  whatsappClient.on('change_state', (state) => {
+    console.log('🔄 Mudança de estado do WhatsApp:', state);
+    // CONNECTED, DISCONNECTED, etc.
+  });
+
+  // ✅ MELHORIA: Socket.IO com autenticação e tratamento melhorado
   io.use((socket, next) => {
     const token = socket.handshake.auth.token;
     console.log('🔐 Autenticando socket, token presente:', !!token);
-    
+
     if (!token) {
       console.log('❌ Socket sem token - rejeitando');
       return next(new Error('Autenticação necessária'));
@@ -318,51 +397,42 @@ function startServer(whatsappClient) {
     });
   });
 
-  // Resto do código do Socket.IO e WhatsApp permanece igual
-  whatsappClient.on('qr', (qr) => {
-    console.log('📱 QR Code gerado pelo WhatsApp');
-    lastQr = qr;
-    generateAndEmitQr(io, qr);
-  });
-
-  const generateAndEmitQr = async (io, qr) => {
-    try {
-      console.log('🎨 Convertendo QR Code para imagem...');
-      const qrImageUrl = await qrcode.toDataURL(qr);
-      console.log('📤 Emitindo QR Code via Socket.IO');
-      io.emit('qr', qrImageUrl);
-      io.emit('status', 'Escaneie o QR Code no WhatsApp');
-    } catch (error) {
-      console.error('💥 ERRO ao gerar QR Code:', error);
-    }
-  };
-
-io.on('connection', (socket) => {
+  io.on('connection', (socket) => {
     console.log('🔌 Novo cliente conectado via Socket.IO, usuário:', socket.userId);
     console.log('🔗 Socket ID:', socket.id);
     console.log('📡 Transporte:', socket.conn.transport.name);
-    
-    if (lastQr) {
-        console.log('📱 Enviando QR Code existente para novo cliente');
-        generateAndEmitQr(socket, lastQr);
+
+    // ✅ MELHORIA: Enviar status atual do WhatsApp para o novo cliente
+    if (whatsappState.isConnected) {
+      console.log('📱 WhatsApp está conectado, enviando status de sucesso');
+      socket.emit('whatsapp_ready', true);
+      socket.emit('status', 'Conectado com sucesso!');
+    } else if (whatsappState.lastQr) {
+      console.log('📱 Enviando QR Code existente para novo cliente');
+      generateAndEmitQr(socket, whatsappState.lastQr);
     } else {
-        console.log('ℹ️  Nenhum QR Code disponível para enviar');
+      console.log('⏳ Aguardando geração do QR Code...');
+      socket.emit('status', 'Aguardando geração do QR Code...');
     }
 
     socket.on('disconnect', (reason) => {
-        console.log('🔌 Cliente desconectado:', socket.userId, 'Razão:', reason);
+      console.log('🔌 Cliente desconectado:', socket.userId, 'Razão:', reason);
     });
-});
 
-  whatsappClient.on('ready', () => {
-    console.log('✅ WhatsApp conectado e pronto!');
-    io.emit('status', 'Conectado com sucesso!');
+    // ✅ NOVO: Evento para forçar nova geração de QR Code
+    socket.on('request_qr', () => {
+      console.log('🔄 Cliente solicitou novo QR Code');
+      if (!whatsappState.isConnected && whatsappState.lastQr) {
+        generateAndEmitQr(socket, whatsappState.lastQr);
+      }
+    });
   });
 
   server.listen(PORT, () => {
     console.log(`🌐 Servidor web rodando em http://localhost:${PORT}`);
     console.log(`🔐 Página de login: http://localhost:${PORT}/admin/login`);
     console.log(`📊 Dashboard: http://localhost:${PORT}/admin/dashboard`);
+    console.log('✅ Aguardando conexão do WhatsApp...');
   });
 
   return server;

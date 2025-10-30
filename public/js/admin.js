@@ -42,6 +42,27 @@ socket.on('connect_error', (error) => {
     document.getElementById('whatsapp-status').className = 'status error';
 });
 
+// ✅ NOVO: Evento específico para quando o WhatsApp está pronto
+socket.on('whatsapp_ready', (isReady) => {
+    console.log('📱 Status WhatsApp pronto:', isReady);
+    const statusDiv = document.getElementById('whatsapp-status');
+    const qrcodeContainer = document.getElementById('qrcode-container');
+    const successContainer = document.getElementById('success-container');
+    
+    if (isReady) {
+        statusDiv.textContent = 'Conectado com sucesso!';
+        statusDiv.className = 'status connected';
+        if (qrcodeContainer) qrcodeContainer.classList.add('hidden');
+        if (successContainer) successContainer.classList.remove('hidden');
+        console.log('✅ WhatsApp conectado - interface atualizada via whatsapp_ready');
+    } else {
+        statusDiv.textContent = 'Desconectado';
+        statusDiv.className = 'status disconnected';
+        if (qrcodeContainer) qrcodeContainer.classList.add('hidden');
+        if (successContainer) successContainer.classList.add('hidden');
+    }
+});
+
 // ✅ CORREÇÃO: Gerenciar status do WhatsApp com mais detalhes
 socket.on('qr', (url) => {
     console.log('📱 QR Code recebido no cliente');
@@ -79,6 +100,7 @@ socket.on('qr', (url) => {
     console.log('✅ QR Code exibido na interface');
 });
 
+// ✅ CORREÇÃO: Melhorar o listener de status existente
 socket.on('status', (message) => {
     console.log('📢 Status recebido:', message);
     const statusDiv = document.getElementById('whatsapp-status');
@@ -92,11 +114,11 @@ socket.on('status', (message) => {
     
     statusDiv.textContent = message;
     
-    if (message.includes('Conectado') || message.includes('pronto')) {
+    if (message.includes('Conectado') || message.includes('pronto') || message.includes('Autenticado')) {
         statusDiv.className = 'status connected';
         if (qrcodeContainer) qrcodeContainer.classList.add('hidden');
         if (successContainer) successContainer.classList.remove('hidden');
-        console.log('✅ WhatsApp conectado - interface atualizada');
+        console.log('✅ WhatsApp conectado - interface atualizada via status');
     } else if (message.includes('Escaneie') || message.includes('QR Code')) {
         statusDiv.className = 'status waiting';
         if (qrcodeContainer) qrcodeContainer.classList.remove('hidden');
