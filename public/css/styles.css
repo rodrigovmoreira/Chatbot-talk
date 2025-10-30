@@ -1,121 +1,233 @@
-body {
+/* Estilos para login */
+.login-body {
     font-family: 'Segoe UI', sans-serif;
-    background: #f5f5f5;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     margin: 0;
-    padding: 20px;
+    padding: 0;
     display: flex;
     justify-content: center;
     align-items: center;
     min-height: 100vh;
 }
 
-.container {
+.login-container {
     background: white;
+    padding: 2rem;
     border-radius: 10px;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-    padding: 30px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
     width: 100%;
     max-width: 400px;
+}
+
+.login-container h1 {
     text-align: center;
+    color: #333;
+    margin-bottom: 2rem;
 }
 
-h1 {
-    color: #25D366;
-    margin-top: 0;
+.tabs {
+    display: flex;
+    margin-bottom: 1rem;
+    border-bottom: 1px solid #ddd;
 }
 
-#qrcode-container {
-    margin: 20px 0;
-    padding: 20px;
-    width: 200px; height: 200px;
-    background: white;
-    border: 1px solid #ddd;
-    border-radius: 8px;
+.tab {
+    flex: 1;
+    padding: 0.75rem;
+    text-align: center;
+    cursor: pointer;
+    border-bottom: 3px solid transparent;
 }
 
-#qrcode {
+.tab.active {
+    border-bottom-color: #667eea;
+    color: #667eea;
+    font-weight: bold;
+}
+
+.tab-content {
+    display: none;
+}
+
+.tab-content.active {
+    display: block;
+}
+
+.form-group {
+    margin-bottom: 1rem;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    color: #555;
+    font-weight: 500;
+}
+
+.form-group input, .form-group textarea, .form-group select {
     width: 100%;
-    height: auto;
-}
-
-.status {
-    padding: 10px;
+    padding: 0.75rem;
+    border: 1px solid #ddd;
     border-radius: 5px;
-    margin: 10px 0;
+    font-size: 1rem;
+    box-sizing: border-box;
 }
 
-.waiting {
-    background: #FFF3E0;
-    color: #E65100;
+.form-group input:focus, .form-group textarea:focus, .form-group select:focus {
+    outline: none;
+    border-color: #667eea;
 }
 
-.connected {
-    background: #E8F5E9;
-    color: #2E7D32;
+button {
+    width: 100%;
+    padding: 0.75rem;
+    background: #667eea;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    font-size: 1rem;
+    cursor: pointer;
+    margin-top: 1rem;
+}
+
+button:hover {
+    background: #5a6fd8;
 }
 
 .error {
-    background: #FFEBEE;
-    color: #C62828;
-}
-
-.instructions {
-    text-align: left;
-    margin-top: 20px;
-    color: #555;
-}
-
-/* Estilos para o container de sucesso */
-#success-container {
-    margin: 25px 0;
-    text-align: center;
-    animation: fadeIn 0.5s ease-in-out;
-    /* Efeito de transição suave */
-}
-
-.success-icon {
-    font-size: 100px;
-    /* Ícone maior */
-    color: #25D366;
-    /* Verde oficial do WhatsApp */
-    margin-bottom: 20px;
-}
-
-.success-message {
-    font-size: 20px;
-    color: #25D366;
-    font-weight: bold;
-    margin-bottom: 15px;
-}
-
-/* Classe utilitária para mostrar/ocultar elementos */
-.hidden {
-    display: none !important;
-}
-
-.whatsapp-button {
-    background: #25D366;
-    color: white;
-    border: none;
-    padding: 10px 20px;
+    color: #e74c3c;
+    background: #fdf2f2;
+    padding: 0.75rem;
     border-radius: 5px;
-    margin-top: 15px;
-    cursor: pointer;
-    transition: 0.3s;
+    margin-bottom: 1rem;
+    border: 1px solid #f5c6cb;
+    display: none;
 }
 
-.whatsapp-button:hover {
-    background: #128C7E;
+/* Estilos para dashboard */
+.dashboard-container {
+    padding: 1rem;
+    max-width: 1200px;
+    margin: 0 auto;
 }
 
-@keyframes fadeIn {
-    from {
-        opacity: 0;
-        transform: translateY(10px);
-    }
+.dashboard-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid #ddd;
+}
 
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
+.dashboard-header h1 {
+    margin: 0;
+    color: #333;
+}
+
+.user-actions {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.btn-logout {
+    background: #e74c3c;
+    width: auto;
+    padding: 0.5rem 1rem;
+}
+
+.btn-logout:hover {
+    background: #c0392b;
+}
+
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1.5rem;
+}
+
+.card {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.card h3 {
+    margin-top: 0;
+    color: #333;
+}
+
+.btn-primary {
+    background: #667eea;
+    width: auto;
+    padding: 0.5rem 1rem;
+}
+
+.btn-secondary {
+    background: #95a5a6;
+    width: auto;
+    padding: 0.5rem 1rem;
+}
+
+.btn-secondary:hover {
+    background: #7f8c8d;
+}
+
+.status {
+    padding: 0.5rem;
+    border-radius: 5px;
+    text-align: center;
+    margin-bottom: 1rem;
+}
+
+.status.connected {
+    background: #d4edda;
+    color: #155724;
+}
+
+.status.disconnected {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+.hidden {
+    display: none;
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+}
+
+.stat-item {
+    text-align: center;
+}
+
+.stat-number {
+    font-size: 2rem;
+    font-weight: bold;
+    display: block;
+}
+
+.stat-label {
+    font-size: 0.8rem;
+    color: #666;
+}
+
+.menu-option, .product-item {
+    border: 1px solid #ddd;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    border-radius: 5px;
+}
+
+.menu-option input, .menu-option textarea, .product-item input {
+    width: 100%;
+    margin-bottom: 0.5rem;
+    padding: 0.5rem;
+    border: 1px solid #ddd;
+    border-radius: 3px;
 }

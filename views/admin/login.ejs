@@ -1,30 +1,133 @@
 <!DOCTYPE html>
-<html>
+<html lang="pt-BR">
 <head>
-  <title>Login Admin</title>
-  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %></title>
+    <link rel="stylesheet" href="/css/styles.css">
 </head>
-<body class="bg-gray-100">
-  <div class="min-h-screen flex items-center justify-center">
-    <div class="bg-white p-8 rounded-lg shadow-md w-full max-w-md">
-      <h1 class="text-2xl font-bold mb-6 text-center">Acesso Administrativo</h1>
-      
-      <% if (error) { %>
-        <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-          Senha incorreta
+<body class="login-body">
+    <div class="login-container">
+        <h1>ChatBot Platform</h1>
+        
+        <div class="tabs">
+            <div class="tab active" onclick="showTab('login')">Login</div>
+            <div class="tab" onclick="showTab('register')">Cadastro</div>
         </div>
-      <% } %>
 
-      <form action="/login" method="POST">
-        <div class="mb-4">
-          <label class="block text-gray-700 mb-2">Senha</label>
-          <input type="password" name="password" class="w-full px-3 py-2 border rounded">
+        <div id="error-message" class="error"></div>
+
+        <!-- Login Form -->
+        <div id="login-tab" class="tab-content active">
+            <form id="login-form">
+                <div class="form-group">
+                    <label for="login-email">Email</label>
+                    <input type="email" id="login-email" name="email" required>
+                </div>
+                <div class="form-group">
+                    <label for="login-password">Senha</label>
+                    <input type="password" id="login-password" name="password" required>
+                </div>
+                <button type="submit">Entrar</button>
+            </form>
         </div>
-        <button type="submit" class="w-full bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600">
-          Entrar
-        </button>
-      </form>
+
+        <!-- Register Form -->
+        <div id="register-tab" class="tab-content">
+            <form id="register-form">
+                <div class="form-group">
+                    <label for="register-name">Nome</label>
+                    <input type="text" id="register-name" name="name" required>
+                </div>
+                <div class="form-group">
+                    <label for="register-email">Email</label>
+                    <input type="email" id="register-email" name="email" required>
+                </div>
+                <div class="form-group">
+                    <label for="register-company">Empresa (opcional)</label>
+                    <input type="text" id="register-company" name="company">
+                </div>
+                <div class="form-group">
+                    <label for="register-password">Senha</label>
+                    <input type="password" id="register-password" name="password" required minlength="6">
+                </div>
+                <button type="submit">Cadastrar</button>
+            </form>
+        </div>
     </div>
-  </div>
+
+    <script>
+        console.log('🔐 Inicializando página de login...');
+        
+        function showTab(tabName) {
+            console.log('📌 Mudando para aba:', tabName);
+            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            
+            document.querySelector(`.tab:nth-child(${tabName === 'login' ? 1 : 2})`).classList.add('active');
+            document.getElementById(`${tabName}-tab`).classList.add('active');
+            document.getElementById('error-message').style.display = 'none';
+        }
+
+        document.getElementById('login-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            console.log('🔐 Submetendo formulário de login...');
+            await handleAuth('/api/login', new FormData(e.target));
+        });
+
+        document.getElementById('register-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            console.log('📝 Submetendo formulário de registro...');
+            await handleAuth('/api/register', new FormData(e.target));
+        });
+
+        async function handleAuth(url, formData) {
+            const data = Object.fromEntries(formData);
+            console.log('📤 Enviando dados para:', url, data);
+            
+            try {
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+
+                console.log('📡 Resposta recebida:', response.status);
+                const result = await response.json();
+                console.log('📨 Conteúdo da resposta:', result);
+
+                if (response.ok) {
+                    console.log('✅ Autenticação bem-sucedida');
+                    localStorage.setItem('token', result.token);
+                    localStorage.setItem('user', JSON.stringify(result.user));
+                    window.location.href = '/admin/dashboard';
+                } else {
+                    console.log('❌ Erro na autenticação:', result.message);
+                    showError(result.message);
+                }
+            } catch (error) {
+                console.error('💥 ERRO de conexão:', error);
+                showError('Erro de conexão com o servidor');
+            }
+        }
+
+        function showError(message) {
+            console.log('🚨 Exibindo erro:', message);
+            const errorDiv = document.getElementById('error-message');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+        }
+
+        // Verificar se já está logado
+        const existingToken = localStorage.getItem('token');
+        console.log('🔍 Verificando token existente:', existingToken ? 'PRESENTE' : 'AUSENTE');
+        
+        if (existingToken) {
+            console.log('🔄 Redirecionando para dashboard...');
+            window.location.href = '/admin/dashboard';
+        }
+
+        console.log('✅ Página de login inicializada');
+    </script>
 </body>
 </html>

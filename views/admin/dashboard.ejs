@@ -1,82 +1,171 @@
 <!DOCTYPE html>
-<html>
-
+<html lang="pt-BR">
 <head>
-    <title>Painel Admin</title>
-    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %></title>
+    <link rel="stylesheet" href="/css/styles.css">
 </head>
+<body>
+    <div class="dashboard-container">
+        <header class="dashboard-header">
+            <h1>Dashboard - <span id="business-name">Meu Negócio</span></h1>
+            <div class="user-actions">
+                <span id="user-greeting">Olá, Vendedor!</span>
+                <button onclick="logout()" class="btn-logout">Sair</button>
+            </div>
+        </header>
 
-<body class="bg-gray-100">
-    <div class="container mx-auto p-4">
-        <!-- Adicione este botão no canto superior direito -->
-        <div class="text-right mb-4">
-            <a href="/" class="inline-block bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600 transition">
-                <i class="fas fa-arrow-left mr-2"></i>Voltar ao Chat
-            </a>
-        </div>
-
-        <h1 class="text-2xl font-bold mb-6">Configuração do Chatbot</h1>
-
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <!-- Card Fluxos -->
-            <div class="bg-white p-4 rounded shadow">
-                <h2 class="text-xl font-semibold mb-4">Fluxos de Conversa</h2>
-                <div id="flows-list" class="mb-4">
-                    <!-- Lista de fluxos será carregada via AJAX -->
+        <div class="dashboard-grid">
+            <!-- Status WhatsApp -->
+            <div class="card">
+                <h3>Status WhatsApp</h3>
+                <div id="whatsapp-status" class="status disconnected">
+                    <span>Desconectado</span>
                 </div>
-                <button onclick="openFlowModal()" class="bg-green-500 text-white px-4 py-2 rounded">
-                    Novo Fluxo
+                <div id="qrcode-container" class="hidden">
+                    <img id="qrcode" src="" alt="QR Code">
+                    <p>Escaneie com seu WhatsApp</p>
+                </div>
+                <button id="connect-btn" onclick="connectWhatsApp()" class="btn-primary">
+                    Conectar WhatsApp
                 </button>
             </div>
 
-            <!-- Card Conexão WhatsApp -->
-            <div class="bg-white p-4 rounded shadow">
-                <h2 class="text-xl font-semibold mb-4">Conexão WhatsApp</h2>
-                <div id="qrcode-container" class="mb-4">
-                    <p class="text-gray-600">Escaneie o QR Code para conectar</p>
-                    <img id="qrcode" class="mx-auto my-4" src="" alt="QR Code">
+            <!-- Configurações do Negócio -->
+            <div class="card">
+                <h3>Configurações do Negócio</h3>
+                <form id="business-config-form">
+                    <div class="form-group">
+                        <label>Nome do Negócio</label>
+                        <input type="text" id="business-name-input" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Segmento</label>
+                        <select id="business-type">
+                            <option value="varejo">Varejo</option>
+                            <option value="servicos">Serviços</option>
+                            <option value="restaurante">Restaurante</option>
+                            <option value="imoveis">Imóveis</option>
+                            <option value="outros">Outros</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Mensagem de Boas-Vindas</label>
+                        <textarea id="welcome-message" rows="3"></textarea>
+                    </div>
+                    <button type="submit" class="btn-primary">Salvar Configurações</button>
+                </form>
+            </div>
+
+            <!-- Menu de Atendimento -->
+            <div class="card">
+                <h3>Menu de Atendimento</h3>
+                <div id="menu-options-container">
+                    <!-- Opções serão carregadas via JavaScript -->
                 </div>
-                <div id="connection-status" class="p-2 rounded bg-yellow-100 text-yellow-800">
-                    Aguardando conexão...
+                <button onclick="addMenuOption()" class="btn-secondary">+ Adicionar Opção</button>
+            </div>
+
+            <!-- Catálogo de Produtos -->
+            <div class="card">
+                <h3>Catálogo de Produtos</h3>
+                <div id="products-container">
+                    <!-- Produtos serão carregados via JavaScript -->
+                </div>
+                <button onclick="addProduct()" class="btn-secondary">+ Adicionar Produto</button>
+            </div>
+
+            <!-- Estatísticas -->
+            <div class="card">
+                <h3>Estatísticas</h3>
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <span class="stat-number" id="total-conversations">0</span>
+                        <span class="stat-label">Conversas Hoje</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-number" id="total-customers">0</span>
+                        <span class="stat-label">Clientes Atendidos</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-number" id="conversion-rate">0%</span>
+                        <span class="stat-label">Taxa de Conversão</span>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Modal para edição de fluxos -->
-    <div id="flow-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-        <div class="bg-white p-6 rounded-lg w-full max-w-md">
-            <h3 class="text-lg font-bold mb-4">Editar Fluxo</h3>
-            <form id="flow-form">
-                <input type="hidden" id="flow-id">
-                <div class="mb-4">
-                    <label class="block mb-2">Gatilho (palavra-chave ou "menu")</label>
-                    <input type="text" id="trigger" class="w-full p-2 border rounded">
-                </div>
-                <div class="mb-4">
-                    <label class="block mb-2">Tipo de Resposta</label>
-                    <select id="response-type" class="w-full p-2 border rounded">
-                        <option value="text">Texto</option>
-                        <option value="menu">Menu</option>
-                    </select>
-                </div>
-                <div class="mb-4">
-                    <label class="block mb-2">Conteúdo</label>
-                    <textarea id="content" class="w-full p-2 border rounded" rows="4"></textarea>
-                </div>
-                <div class="flex justify-end">
-                    <button type="button" onclick="closeFlowModal()" class="mr-2 px-4 py-2 border rounded">
-                        Cancelar
-                    </button>
-                    <button type="submit" class="bg-blue-500 text-white px-4 py-2 rounded">
-                        Salvar
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const token = localStorage.getItem('token');
+        const user = JSON.parse(localStorage.getItem('user') || '{}');
+        
+        if (!token) {
+            window.location.href = '/admin/login';
+        }
 
-    <script src="/js/admin.js"></script>
+        document.getElementById('user-greeting').textContent = `Olá, ${user.name || 'Usuário'}!`;
+
+        const socket = io({
+            auth: {
+                token: token
+            }
+        });
+
+        // Resto do código do dashboard (conexão WhatsApp, carregar configurações, etc.)
+        // ... (código JavaScript para gerenciar o dashboard)
+
+        function logout() {
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            window.location.href = '/admin/login';
+        }
+
+        // Carregar configurações do negócio
+        async function loadBusinessConfig() {
+            try {
+                const response = await fetch('/api/business-config', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                
+                if (response.ok) {
+                    const config = await response.json();
+                    document.getElementById('business-name').textContent = config.businessName;
+                    document.getElementById('business-name-input').value = config.businessName;
+                    document.getElementById('business-type').value = config.businessType;
+                    document.getElementById('welcome-message').value = config.welcomeMessage;
+                    
+                    loadMenuOptions(config.menuOptions);
+                    loadProducts(config.products);
+                }
+            } catch (error) {
+                console.error('Erro ao carregar configurações:', error);
+            }
+        }
+
+        // Carregar opções do menu
+        function loadMenuOptions(menuOptions) {
+            const container = document.getElementById('menu-options-container');
+            container.innerHTML = menuOptions.map((option, index) => `
+                <div class="menu-option">
+                    <input type="text" value="${option.keyword}" placeholder="Palavra-chave" 
+                           onchange="updateMenuOption(${index}, 'keyword', this.value)">
+                    <input type="text" value="${option.description}" placeholder="Descrição"
+                           onchange="updateMenuOption(${index}, 'description', this.value)">
+                    <textarea onchange="updateMenuOption(${index}, 'response', this.value)"
+                              placeholder="Resposta">${option.response}</textarea>
+                    <button onclick="removeMenuOption(${index})">🗑️</button>
+                </div>
+            `).join('');
+        }
+
+        // Inicializar
+        document.addEventListener('DOMContentLoaded', function() {
+            loadBusinessConfig();
+            // loadStats();
+        });
+    </script>
 </body>
-
 </html>
