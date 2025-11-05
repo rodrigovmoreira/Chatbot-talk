@@ -10,8 +10,13 @@ const ERROR_MESSAGE = '⚠️ Ops! Tive um problema. Pode tentar novamente?';
 
 async function handleMessage(client, msg) {
   // ✅ CORREÇÃO: Validação mais robusta
-  if (!msg?.from || !msg?.body || msg.from.includes('status') || msg.from.includes('broadcast')) {
-    console.log('❌ Mensagem inválida ou de status ignorada');
+  if (!msg || !msg.from || !msg.body) {
+    console.log('❌ Mensagem inválida ignorada');
+    return;
+  }
+
+  if (msg.from.includes('status') || msg.from.includes('broadcast')) {
+    console.log('❌ Mensagem de status/broadcast ignorada');
     return;
   }
 
@@ -34,7 +39,7 @@ async function handleMessage(client, msg) {
     }
 
     console.log('🔍 Buscando configuração do negócio...');
-    
+
     // ✅ CORREÇÃO: Buscar configuração de forma mais robusta
     let businessConfig;
     try {
@@ -91,7 +96,7 @@ async function handleMessage(client, msg) {
     }
 
     console.log('🧠 Nenhum comando de menu, usando IA...');
-    
+
     // Se não for comando de menu, usar IA contextual
     let history = [];
     try {
@@ -102,20 +107,20 @@ async function handleMessage(client, msg) {
     }
 
     const context = createBusinessContext(history, businessConfig);
-    
+
     console.log('🔄 Gerando resposta da IA...');
     const aiResponse = await generateBusinessAIResponse(userMessage, context, businessConfig);
-    
+
     if (aiResponse) {
       console.log('✅ Resposta da IA gerada:', aiResponse.substring(0, 100) + '...');
-      
+
       // ✅ CORREÇÃO: Simular digitação antes de enviar
       try {
         await simulateTyping(chat);
       } catch (error) {
         console.log('⚠️  Não foi possível simular digitação, continuando...');
       }
-      
+
       await client.sendMessage(msg.from, aiResponse);
       await saveMessage(msg.from, 'bot', aiResponse);
     } else {
@@ -138,7 +143,7 @@ async function handleMessage(client, msg) {
 async function showMainMenu(client, phone, businessConfig) {
   try {
     console.log('📋 Mostrando menu principal para:', phone);
-    
+
     const menuOptions = businessConfig.menuOptions || [];
     if (menuOptions.length === 0) {
       console.log('⚠️  Nenhuma opção de menu configurada');
@@ -146,11 +151,11 @@ async function showMainMenu(client, phone, businessConfig) {
     }
 
     const menuText = `🗂️ *Menu Principal*:\n\n` +
-      menuOptions.map((opt, index) => 
+      menuOptions.map((opt, index) =>
         `${index + 1}️⃣ *${opt.keyword}* - ${opt.description}`
       ).join('\n') +
       `\n\nDigite o número ou palavra-chave da opção desejada.`;
-    
+
     await client.sendMessage(phone, menuText);
     await saveMessage(phone, 'bot', menuText);
     console.log('✅ Menu principal enviado');
@@ -164,16 +169,16 @@ async function processMenuCommand(message, businessConfig) {
   try {
     const lowerMessage = message.toLowerCase().trim();
     console.log('🔍 Procurando comando no menu:', lowerMessage);
-    
+
     const menuOptions = businessConfig.menuOptions || [];
-    
+
     // Buscar opção por número ou palavra-chave
     const option = menuOptions.find((opt, index) => {
       const matchByNumber = lowerMessage === (index + 1).toString();
       const matchByKeyword = opt.keyword && lowerMessage.includes(opt.keyword.toLowerCase());
       return matchByNumber || matchByKeyword;
     });
-    
+
     if (option) {
       console.log('✅ Opção do menu encontrada:', option.keyword);
       if (option.requiresHuman) {
@@ -181,7 +186,7 @@ async function processMenuCommand(message, businessConfig) {
       }
       return option.response;
     }
-    
+
     console.log('❌ Nenhuma opção do menu correspondente');
     return null;
   } catch (error) {
@@ -198,16 +203,16 @@ Empresa: ${businessConfig.businessName || 'Não configurado'}
 Segmento: ${businessConfig.businessType || 'Não especificado'}
 Horário: ${businessConfig.operatingHours?.opening || '09:00'} às ${businessConfig.operatingHours?.closing || '18:00'}
     `.trim();
-    
-    const productsInfo = businessConfig.products && businessConfig.products.length > 0 
+
+    const productsInfo = businessConfig.products && businessConfig.products.length > 0
       ? `Produtos: ${businessConfig.products.map(p => p.name).join(', ')}`
       : 'Produtos: Nenhum produto cadastrado';
-    
+
     const conversationHistory = history
       .reverse()
       .map(m => `${m.role === 'user' ? 'Cliente' : 'Bot'}: ${m.content}`)
       .join('\n');
-    
+
     return `Informações da Empresa:\n${businessInfo}\n${productsInfo}\n\nHistórico da Conversa:\n${conversationHistory || 'Nenhum histórico anterior'}`;
   } catch (error) {
     console.error('💥 Erro ao criar contexto:', error);
@@ -219,7 +224,7 @@ Horário: ${businessConfig.operatingHours?.opening || '09:00'} às ${businessCon
 async function generateBusinessAIResponse(message, context, businessConfig) {
   try {
     console.log('🧠 Preparando prompt para IA...');
-    
+
     const prompt = `
 Você é um atendente virtual da empresa "${businessConfig.businessName || 'nossa empresa'}", que atua no segmento de ${businessConfig.businessType || 'vários serviços'}.
 
@@ -245,7 +250,7 @@ SUA RESPOSTA (seja natural, direto e útil):`.trim();
 
     console.log('📤 Enviando prompt para IA...');
     const response = await generateAIResponse(prompt);
-    
+
     if (response && response.trim()) {
       return response.trim();
     } else {
