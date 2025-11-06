@@ -15,16 +15,19 @@ if (!token) {
 
 document.getElementById('user-greeting').textContent = `Olá, ${user.name || 'Usuário'}!`;
 
-// ✅ CORREÇÃO: Inicialização do Socket.IO com mais opções
+// Estado do WhatsApp
+let whatsappConnected = false;
+
+// Socket.IO
 console.log('🔌 Conectando ao Socket.IO...');
 const socket = io({
     auth: { 
         token: token 
     },
-    transports: ['websocket', 'polling'] // Forçar ambos os transportes
+    transports: ['websocket', 'polling']
 });
 
-// ✅ CORREÇÃO: Logs de conexão Socket.IO
+// Eventos Socket.IO
 socket.on('connect', () => {
     console.log('✅ Conectado ao servidor via Socket.IO');
     console.log('🔗 ID da conexão:', socket.id);
@@ -32,48 +35,126 @@ socket.on('connect', () => {
 
 socket.on('disconnect', (reason) => {
     console.log('❌ Desconectado do Socket.IO:', reason);
-    document.getElementById('whatsapp-status').textContent = 'Desconectado do servidor';
-    document.getElementById('whatsapp-status').className = 'status disconnected';
+    updateWhatsAppStatus('Desconectado do servidor', 'disconnected');
 });
 
 socket.on('connect_error', (error) => {
     console.error('💥 Erro de conexão Socket.IO:', error);
-    document.getElementById('whatsapp-status').textContent = 'Erro de conexão';
-    document.getElementById('whatsapp-status').className = 'status error';
+    updateWhatsAppStatus('Erro de conexão', 'error');
 });
 
-// ✅ NOVO: Evento específico para quando o WhatsApp está pronto
+// ✅ CORREÇÃO: Eventos do WhatsApp simplificados
 socket.on('whatsapp_ready', (isReady) => {
     console.log('📱 Status WhatsApp pronto:', isReady);
-    const statusDiv = document.getElementById('whatsapp-status');
-    const qrcodeContainer = document.getElementById('qrcode-container');
-    const successContainer = document.getElementById('success-container');
-    
-    if (isReady) {
-        statusDiv.textContent = 'Conectado com sucesso!';
-        statusDiv.className = 'status connected';
-        if (qrcodeContainer) qrcodeContainer.classList.add('hidden');
-        if (successContainer) successContainer.classList.remove('hidden');
-        console.log('✅ WhatsApp conectado - interface atualizada via whatsapp_ready');
-    } else {
-        statusDiv.textContent = 'Desconectado';
-        statusDiv.className = 'status disconnected';
-        if (qrcodeContainer) qrcodeContainer.classList.add('hidden');
-        if (successContainer) successContainer.classList.add('hidden');
-    }
+    whatsappConnected = isReady;
+    updateWhatsAppUI(isReady);
 });
 
-// ✅ CORREÇÃO: Gerenciar status do WhatsApp com mais detalhes
 socket.on('qr', (url) => {
     console.log('📱 QR Code recebido no cliente');
-    console.log('🖼️ URL do QR Code:', url.substring(0, 100) + '...'); // Log parcial da URL
+    console.log('🖼️ URL do QR Code:', url.substring(0, 100) + '...');
     
-    const qrcodeImg = document.getElementById('qrcode');
+    showQRCode(url);
+    updateWhatsAppStatus('Aguardando escaneamento do QR Code...', 'waiting');
+});
+
+socket.on('status', (message) => {
+    console.log('📢 Status recebido:', message);
+    updateWhatsAppStatus(message, getStatusClass(message));
+});
+
+// ✅ CORREÇÃO: Função única para toggle do WhatsApp
+function toggleWhatsApp() {
+    console.log('🔄 Alternando estado do WhatsApp...');
+    if (whatsappConnected) {
+        disconnectWhatsApp();
+    } else {
+        connectWhatsApp();
+    }
+}
+
+function connectWhatsApp() {
+    console.log('🔗 Solicitando QR Code...');
+    socket.emit('request_qr');
+    updateWhatsAppStatus('Solicitando QR Code...', 'waiting');
+}
+
+function disconnectWhatsApp() {
+    console.log('🔌 Solicitando desconexão...');
+    // Em uma implementação real, aqui você enviaria um evento para o servidor desconectar
+    updateWhatsAppStatus('Desconectado - Recarregue a página para reconectar', 'disconnected');
+    updateWhatsAppUI(false);
+}
+
+// ✅ CORREÇÃO: Atualização unificada da UI do WhatsApp
+function updateWhatsAppUI(isConnected) {
     const statusDiv = document.getElementById('whatsapp-status');
     const qrcodeContainer = document.getElementById('qrcode-container');
     const successContainer = document.getElementById('success-container');
+    const actionBtn = document.getElementById('whatsapp-action-btn');
     
-    // Verificar se os elementos existem
+    whatsappConnected = isConnected;
+    
+    if (isConnected) {
+        // WhatsApp CONECTADO
+        console.log('✅ Atualizando UI para: CONECTADO');
+        qrcodeContainer.classList.add('hidden');
+        successContainer.classList.remove('hidden');
+        actionBtn.textContent = '🔌 Desconectar WhatsApp';
+        actionBtn.className = 'btn-secondary';
+        statusDiv.textContent = 'Conectado com sucesso!';
+        statusDiv.className = 'status connected';
+    } else {
+        // WhatsApp DESCONECTADO
+        console.log('❌ Atualizando UI para: DESCONECTADO');
+        qrcodeContainer.classList.add('hidden');
+        successContainer.classList.add('hidden');
+        actionBtn.textContent = 'Conectar WhatsApp';
+        actionBtn.className = 'btn-primary';
+        statusDiv.textContent = 'Desconectado';
+        statusDiv.className = 'status disconnected';
+    }
+}
+
+function updateWhatsAppStatus(message, statusClass) {
+    const statusDiv = document.getElementById('whatsapp-status');
+    const qrcodeContainer = document.getElementById('qrcode-container');
+    const successContainer = document.getElementById('success-container');
+    const actionBtn = document.getElementById('whatsapp-action-btn');
+    
+    if (!statusDiv) {
+        console.error('❌ Elemento #whatsapp-status não encontrado');
+        return;
+    }
+    
+    statusDiv.textContent = message;
+    statusDiv.className = `status ${statusClass}`;
+    
+    // Atualiza a UI baseada no status atual
+    if (statusClass === 'connected') {
+        updateWhatsAppUI(true);
+    } else if (statusClass === 'waiting') {
+        qrcodeContainer.classList.remove('hidden');
+        successContainer.classList.add('hidden');
+        actionBtn.textContent = 'Conectar WhatsApp';
+        actionBtn.className = 'btn-primary';
+    } else if (statusClass === 'disconnected' || statusClass === 'error') {
+        updateWhatsAppUI(false);
+    }
+}
+
+function getStatusClass(message) {
+    if (message.includes('Conectado') || message.includes('pronto') || message.includes('Autenticado')) return 'connected';
+    if (message.includes('Escaneie') || message.includes('QR Code')) return 'waiting';
+    if (message.includes('Desconectado') || message.includes('Falha') || message.includes('Erro')) return 'disconnected';
+    return 'waiting';
+}
+
+function showQRCode(url) {
+    const qrcodeImg = document.getElementById('qrcode');
+    const qrcodeContainer = document.getElementById('qrcode-container');
+    const successContainer = document.getElementById('success-container');
+    
     if (!qrcodeImg) {
         console.error('❌ Elemento #qrcode não encontrado');
         return;
@@ -87,10 +168,6 @@ socket.on('qr', (url) => {
     qrcodeImg.src = url;
     qrcodeImg.alt = 'QR Code para conectar WhatsApp';
     
-    // Atualizar status
-    statusDiv.textContent = 'Aguardando escaneamento do QR Code...';
-    statusDiv.className = 'status waiting';
-    
     // Mostrar container do QR Code e ocultar sucesso
     qrcodeContainer.classList.remove('hidden');
     if (successContainer) {
@@ -98,52 +175,118 @@ socket.on('qr', (url) => {
     }
     
     console.log('✅ QR Code exibido na interface');
-});
+}
 
-// ✅ CORREÇÃO: Melhorar o listener de status existente
-socket.on('status', (message) => {
-    console.log('📢 Status recebido:', message);
-    const statusDiv = document.getElementById('whatsapp-status');
-    const qrcodeContainer = document.getElementById('qrcode-container');
-    const successContainer = document.getElementById('success-container');
+// ✅ Sistema de Menu de Atendimento
+let menuOptions = [];
+
+function loadMenuOptions(options) {
+    console.log('📝 Carregando opções do menu:', options);
+    menuOptions = options || [];
+    const container = document.getElementById('menu-options-container');
     
-    if (!statusDiv) {
-        console.error('❌ Elemento #whatsapp-status não encontrado');
+    if (!container) {
+        console.error('❌ Container de opções do menu não encontrado');
         return;
     }
     
-    statusDiv.textContent = message;
-    
-    if (message.includes('Conectado') || message.includes('pronto') || message.includes('Autenticado')) {
-        statusDiv.className = 'status connected';
-        if (qrcodeContainer) qrcodeContainer.classList.add('hidden');
-        if (successContainer) successContainer.classList.remove('hidden');
-        console.log('✅ WhatsApp conectado - interface atualizada via status');
-    } else if (message.includes('Escaneie') || message.includes('QR Code')) {
-        statusDiv.className = 'status waiting';
-        if (qrcodeContainer) qrcodeContainer.classList.remove('hidden');
-        if (successContainer) successContainer.classList.add('hidden');
-    } else if (message.includes('Desconectado') || message.includes('Falha')) {
-        statusDiv.className = 'status disconnected';
-        if (qrcodeContainer) qrcodeContainer.classList.add('hidden');
-        if (successContainer) successContainer.classList.add('hidden');
-    } else {
-        statusDiv.className = 'status waiting';
+    if (menuOptions.length === 0) {
+        container.innerHTML = '<p class="no-options">Nenhuma opção configurada. Clique em "Adicionar Opção" para começar.</p>';
+        return;
     }
-});
-
-// ✅ CORREÇÃO: Função para conectar WhatsApp
-function connectWhatsApp() {
-    console.log('🔗 Solicitando nova geração de QR Code...');
-    // O servidor deve regenerar o QR Code automaticamente quando o cliente WhatsApp estiver pronto
-    // Esta função pode ser usada para forçar uma reconexão se necessário
-    document.getElementById('whatsapp-status').textContent = 'Solicitando QR Code...';
-    document.getElementById('whatsapp-status').className = 'status waiting';
+    
+    container.innerHTML = menuOptions.map((option, index) => `
+        <div class="menu-option" data-index="${index}">
+            <input type="text" value="${option.keyword || ''}" placeholder="Palavra-chave (ex: produtos)" 
+                   onchange="updateMenuOption(${index}, 'keyword', this.value)">
+            <input type="text" value="${option.description || ''}" placeholder="Descrição (ex: Ver produtos)"
+                   onchange="updateMenuOption(${index}, 'description', this.value)">
+            <textarea placeholder="Resposta automática" 
+                      onchange="updateMenuOption(${index}, 'response', this.value)">${option.response || ''}</textarea>
+            <div class="menu-actions">
+                <label class="human-attendance-label">
+                    <input type="checkbox" ${option.requiresHuman ? 'checked' : ''} 
+                           onchange="updateMenuOption(${index}, 'requiresHuman', this.checked)">
+                    Encaminhar para atendente humano
+                </label>
+                <button class="btn-remove" onclick="removeMenuOption(${index})">🗑️ Remover</button>
+            </div>
+        </div>
+    `).join('');
+    
+    console.log(`✅ ${menuOptions.length} opções carregadas`);
 }
 
-// ✅ CORREÇÃO: Carregar configurações do negócio
+function addMenuOption() {
+    console.log('➕ Adicionando nova opção de menu');
+    
+    const newOption = {
+        keyword: '',
+        description: '',
+        response: '',
+        requiresHuman: false
+    };
+    
+    menuOptions.push(newOption);
+    saveMenuOptions();
+    loadMenuOptions(menuOptions);
+}
+
+function removeMenuOption(index) {
+    console.log(`🗑️ Tentando remover opção: ${index}`);
+    
+    if (confirm('Tem certeza que deseja remover esta opção?')) {
+        menuOptions.splice(index, 1);
+        saveMenuOptions();
+        loadMenuOptions(menuOptions);
+        console.log(`✅ Opção ${index} removida`);
+    }
+}
+
+async function updateMenuOption(index, field, value) {
+    console.log(`📝 Atualizando opção ${index}, campo ${field}:`, value);
+    
+    if (menuOptions[index]) {
+        menuOptions[index][field] = value;
+        await saveMenuOptions();
+        console.log(`✅ Opção ${index} atualizada com sucesso`);
+    } else {
+        console.error(`❌ Opção ${index} não encontrada`);
+    }
+}
+
+async function saveMenuOptions() {
+    console.log('💾 Salvando opções do menu...');
+    
+    try {
+        const response = await fetch('/api/business-config', {
+            method: 'PUT',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                menuOptions: menuOptions
+            })
+        });
+        
+        if (response.ok) {
+            console.log('✅ Opções do menu salvas com sucesso');
+        } else {
+            const error = await response.json();
+            console.error('❌ Erro ao salvar opções:', error);
+            alert('Erro ao salvar opções: ' + (error.message || 'Erro desconhecido'));
+        }
+    } catch (error) {
+        console.error('💥 ERRO ao salvar opções:', error);
+        alert('Erro de conexão ao salvar opções');
+    }
+}
+
+// ✅ Carregar configurações do negócio
 async function loadBusinessConfig() {
     console.log('📋 Carregando configurações do negócio...');
+    
     try {
         const response = await fetch('/api/business-config', {
             headers: { 
@@ -166,109 +309,42 @@ async function loadBusinessConfig() {
             
             // Carregar opções do menu
             loadMenuOptions(config.menuOptions || []);
+            
+            // Carregar estatísticas
+            loadStats();
         } else {
             console.error('❌ Erro ao carregar configurações:', response.status);
+            const error = await response.json();
+            alert('Erro ao carregar configurações: ' + (error.message || 'Erro desconhecido'));
         }
     } catch (error) {
         console.error('💥 ERRO ao carregar configurações:', error);
+        alert('Erro de conexão ao carregar configurações');
     }
 }
 
-function loadMenuOptions(menuOptions) {
-    console.log('📝 Carregando opções do menu:', menuOptions);
-    const container = document.getElementById('menu-options-container');
+// ✅ Carregar estatísticas
+async function loadStats() {
+    console.log('📊 Carregando estatísticas...');
     
-    if (!container) {
-        console.error('❌ Container de opções do menu não encontrado');
-        return;
-    }
-    
-    if (!menuOptions || menuOptions.length === 0) {
-        container.innerHTML = '<p style="color: #666; text-align: center;">Nenhuma opção configurada</p>';
-        return;
-    }
-    
-    container.innerHTML = menuOptions.map((option, index) => `
-        <div class="menu-option">
-            <input type="text" value="${option.keyword || ''}" placeholder="Palavra-chave (ex: produtos)" 
-                   onchange="updateMenuOption(${index}, 'keyword', this.value)">
-            <input type="text" value="${option.description || ''}" placeholder="Descrição (ex: Ver produtos)"
-                   onchange="updateMenuOption(${index}, 'description', this.value)">
-            <textarea onchange="updateMenuOption(${index}, 'response', this.value)"
-                      placeholder="Resposta automática">${option.response || ''}</textarea>
-            <button onclick="removeMenuOption(${index})" style="background: #ff4444; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer;">🗑️ Remover</button>
-        </div>
-    `).join('');
-}
-
-async function updateMenuOption(index, field, value) {
-    console.log(`📝 Atualizando opção ${index}, campo ${field}:`, value);
     try {
-        const response = await fetch('/api/business-config', {
-            method: 'PUT',
-            headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                [`menuOptions.${index}.${field}`]: value
-            })
-        });
+        // Por enquanto, vamos usar valores estáticos
+        // Em uma implementação real, você faria uma chamada API
+        document.getElementById('total-conversations').textContent = '0';
+        document.getElementById('total-customers').textContent = '0';
+        document.getElementById('messages-today').textContent = '0';
+        document.getElementById('response-rate').textContent = '0%';
         
-        if (response.ok) {
-            console.log('✅ Opção atualizada com sucesso');
-        } else {
-            console.error('❌ Erro ao atualizar opção:', response.status);
-        }
+        console.log('✅ Estatísticas carregadas');
     } catch (error) {
-        console.error('💥 ERRO ao atualizar opção:', error);
+        console.error('💥 Erro ao carregar estatísticas:', error);
     }
 }
 
-// ✅ CORREÇÃO: Função de logout
-async function logout() {
-    console.log('🚪 Realizando logout...');
-    try {
-        await fetch('/api/logout', { 
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            }
-        });
-    } catch (error) {
-        console.error('💥 Erro no logout:', error);
-    } finally {
-        // Limpar localStorage
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
-        // Redirecionar para login
-        window.location.href = '/admin/login';
-    }
-}
-
-// ✅ CORREÇÃO: Inicialização completa
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('🚀 DOM carregado, inicializando dashboard...');
-    
-    // Carregar configurações do negócio
-    loadBusinessConfig();
-    
-    // Configurar formulário de negócio
-    const businessForm = document.getElementById('business-config-form');
-    if (businessForm) {
-        businessForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            console.log('💾 Salvando configurações do negócio...');
-            await saveBusinessConfig();
-        });
-    } else {
-        console.error('❌ Formulário de configuração do negócio não encontrado');
-    }
-    
-    console.log('✅ Dashboard inicializado completamente');
-});
-
+// ✅ Salvar configurações do negócio
 async function saveBusinessConfig() {
+    console.log('💾 Salvando configurações do negócio...');
+    
     try {
         const configData = {
             businessName: document.getElementById('business-name-input').value,
@@ -291,16 +367,88 @@ async function saveBusinessConfig() {
             console.log('✅ Configurações salvas com sucesso!');
             // Atualizar o nome no header
             document.getElementById('business-name').textContent = configData.businessName;
-            alert('Configurações salvas com sucesso!');
+            alert('✅ Configurações salvas com sucesso!');
         } else {
             const error = await response.json();
             console.error('❌ Erro ao salvar configurações:', error);
-            alert('Erro ao salvar configurações: ' + error.message);
+            alert('❌ Erro ao salvar configurações: ' + (error.message || 'Erro desconhecido'));
         }
     } catch (error) {
         console.error('💥 ERRO ao salvar configurações:', error);
-        alert('Erro de conexão ao salvar configurações');
+        alert('❌ Erro de conexão ao salvar configurações');
     }
 }
+
+// ✅ Função de logout
+async function logout() {
+    console.log('🚪 Realizando logout...');
+    
+    if (!confirm('Tem certeza que deseja sair?')) {
+        return;
+    }
+    
+    try {
+        const response = await fetch('/api/logout', { 
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+        
+        if (response.ok) {
+            console.log('✅ Logout realizado com sucesso');
+        } else {
+            console.error('❌ Erro no logout:', response.status);
+        }
+    } catch (error) {
+        console.error('💥 Erro no logout:', error);
+    } finally {
+        // Limpar localStorage
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        // Redirecionar para login
+        window.location.href = '/admin/login';
+    }
+}
+
+// ✅ INICIALIZAÇÃO
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('🚀 DOM carregado, inicializando dashboard...');
+    
+    // Carregar configurações do negócio
+    loadBusinessConfig();
+    
+    // Configurar formulário de negócio
+    const businessForm = document.getElementById('business-config-form');
+    if (businessForm) {
+        businessForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            console.log('💾 Salvando configurações do negócio...');
+            await saveBusinessConfig();
+        });
+    } else {
+        console.error('❌ Formulário de configuração do negócio não encontrado');
+    }
+    
+    // Configurar botão do WhatsApp
+    const whatsappBtn = document.getElementById('whatsapp-action-btn');
+    if (whatsappBtn) {
+        // Já está configurado via onclick no HTML
+        console.log('✅ Botão WhatsApp configurado');
+    } else {
+        console.error('❌ Botão WhatsApp não encontrado');
+    }
+    
+    console.log('✅ Dashboard inicializado completamente');
+});
+
+// ✅ Tratamento de erros globais
+window.addEventListener('error', function(event) {
+    console.error('💥 Erro global capturado:', event.error);
+});
+
+window.addEventListener('unhandledrejection', function(event) {
+    console.error('💥 Promise rejeitada não tratada:', event.reason);
+});
 
 console.log('✅ admin.js carregado completamente');

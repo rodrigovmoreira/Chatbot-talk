@@ -17,8 +17,8 @@
         </header>
 
         <div class="dashboard-grid">
-            <!-- Status WhatsApp Card -->
-            <div class="card">
+            <!-- Status WhatsApp Card - LARGURA MÉDIA -->
+            <div class="card card-whatsapp">
                 <h3>Status WhatsApp</h3>
                 <div id="whatsapp-status" class="status disconnected">
                     <span>Desconectado</span>
@@ -45,11 +45,14 @@
                     <p>O bot está pronto para receber mensagens</p>
                 </div>
 
-                <button id="connect-btn" class="btn-primary" onclick="connectWhatsApp()">Conectar WhatsApp</button>
+                <!-- ✅ CORREÇÃO: Botão único que muda dinamicamente -->
+                <button id="whatsapp-action-btn" class="btn-primary" onclick="toggleWhatsApp()">
+                    Conectar WhatsApp
+                </button>
             </div>
 
-            <!-- Configurações do Negócio -->
-            <div class="card">
+            <!-- Configurações do Negócio - LARGURA MAIOR -->
+            <div class="card card-business">
                 <h3>Configurações do Negócio</h3>
                 <form id="business-config-form">
                     <div class="form-group">
@@ -61,6 +64,7 @@
                         <select id="business-type" name="businessType">
                             <option value="varejo">Varejo</option>
                             <option value="servicos">Serviços</option>
+                            <option value="servicos">Serviços Online</option>
                             <option value="restaurante">Restaurante</option>
                             <option value="imoveis">Imóveis</option>
                             <option value="outros">Outros</option>
@@ -74,19 +78,20 @@
                 </form>
             </div>
 
-            <!-- Menu de Atendimento -->
-            <div class="card">
+            <!-- Menu de Atendimento - LARGURA MÁXIMA -->
+            <div class="card card-menu">
                 <h3>Menu de Atendimento</h3>
                 <div id="menu-options-container">
                     <!-- As opções serão carregadas via JavaScript -->
                 </div>
-                <button onclick="addMenuOption()" class="btn-secondary" style="background: #666; color: white; padding: 10px; border: none; border-radius: 5px; cursor: pointer; width: 100%; margin-top: 10px;">
+                
+                <button onclick="addMenuOption()" class="btn-secondary">
                     + Adicionar Opção
                 </button>
             </div>
 
-            <!-- Estatísticas -->
-            <div class="card">
+            <!-- Estatísticas - LARGURA PEQUENA -->
+            <div class="card card-stats">
                 <h3>Estatísticas</h3>
                 <div class="stats-grid">
                     <div class="stat-item">
@@ -96,6 +101,14 @@
                     <div class="stat-item">
                         <span class="stat-number" id="total-customers">0</span>
                         <span class="stat-label">Clientes Atendidos</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-number" id="messages-today">0</span>
+                        <span class="stat-label">Mensagens Hoje</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-number" id="response-rate">0%</span>
+                        <span class="stat-label">Taxa de Resposta</span>
                     </div>
                 </div>
             </div>
