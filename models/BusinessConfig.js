@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 
 const businessConfigSchema = new mongoose.Schema({
-  userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  userId: { type: mongoose.Schema.Types.ObjectId, ref: 'SystemUser', required: true },
   businessName: { type: String, required: true },
   businessType: { 
     type: String, 
