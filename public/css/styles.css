@@ -917,3 +917,55 @@ p {
     background: #fed7d7;
     border: 1px solid #fc8181;
 }
+
+/* Regras de comportamento */
+.card-behavior {
+    grid-column: 1 / span 2;
+    grid-row: auto;
+    min-height: 220px;
+}
+
+.behavior-config label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 500;
+    color: #4a5568;
+}
+
+#save-behavior-btn {
+    margin-top: 16px;
+}
+
+/* Mensagens padrão */
+.card-messages {
+    grid-column: 1 / span 2;
+    grid-row: auto;
+    min-height: 260px;
+}
+
+.message-config label {
+    display: block;
+    margin-bottom: 6px;
+    font-weight: 500;
+    color: #4a5568;
+}
+
+.message-config textarea {
+    width: 100%;
+    padding: 10px 14px;
+    border: 2px solid #e2e8f0;
+    border-radius: 8px;
+    margin-bottom: 12px;
+    font-size: 0.95rem;
+    resize: vertical;
+    transition: all 0.3s;
+}
+
+.message-config textarea:focus {
+    border-color: #25D366;
+    box-shadow: 0 0 0 3px rgba(37, 211, 102, 0.1);
+}
+
+#save-msgs-btn {
+    margin-top: 16px;
+}
