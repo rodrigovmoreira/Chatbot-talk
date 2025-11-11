@@ -304,12 +304,27 @@ function startServer(whatsappClient) {
   });
 
   // ✅ DASHBOARD: COM authenticateCookie
-  app.get('/admin/dashboard', authenticateCookie, (req, res) => {
+  app.get('/admin/dashboard', authenticateCookie, async (req, res) => {
     console.log('📊 Servindo dashboard para usuário:', req.user.userId);
-    res.render('admin/dashboard', {
-      title: 'Dashboard - ChatBot Platform'
-    });
+    try {
+      const user = await SystemUser.findById(req.user.userId);
+      const config = await BusinessConfig.findOne({ userId: req.user.userId });
+
+      res.render('admin/dashboard', {
+        title: 'Dashboard - ChatBot Platform',
+        userName: user ? user.name : 'Usuário',
+        businessName: config ? config.businessName : 'Meu Negócio'
+      });
+    } catch (error) {
+      console.error('💥 ERRO ao carregar dados do dashboard:', error);
+      res.render('admin/dashboard', {
+        title: 'Dashboard - ChatBot Platform',
+        userName: 'Usuário',
+        businessName: 'Meu Negócio'
+      });
+    }
   });
+
 
   // ✅ MELHORIA: Função para emitir QR Code
   const generateAndEmitQr = async (io, qr) => {
@@ -345,10 +360,10 @@ function startServer(whatsappClient) {
     whatsappState.isAuthenticated = true;
     whatsappState.connectionTime = new Date();
     whatsappState.lastQr = null;
-    
+
     io.emit('status', 'Conectado com sucesso! O bot está pronto para receber mensagens.');
     io.emit('whatsapp_ready', true);
-    
+
     console.log('🕒 Tempo de conexão:', whatsappState.connectionTime.toLocaleString());
   });
 
@@ -357,7 +372,7 @@ function startServer(whatsappClient) {
     whatsappState.isConnected = false;
     whatsappState.isAuthenticated = false;
     whatsappState.connectionTime = null;
-    
+
     io.emit('status', `Desconectado: ${reason} - Reinicie o servidor`);
     io.emit('whatsapp_ready', false);
   });
@@ -366,7 +381,7 @@ function startServer(whatsappClient) {
     console.error('💥 Falha na autenticação do WhatsApp:', error);
     whatsappState.isConnected = false;
     whatsappState.isAuthenticated = false;
-    
+
     io.emit('status', 'Falha na autenticação - Recarregue a página e tente novamente');
     io.emit('whatsapp_ready', false);
   });

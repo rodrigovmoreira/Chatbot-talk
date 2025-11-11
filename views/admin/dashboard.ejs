@@ -1,121 +1,126 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><%= title %></title>
-    <link rel="stylesheet" href="/css/styles.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= title || 'Dashboard' %></title>
+  <link rel="stylesheet" href="/css/styles.css">
 </head>
 <body>
-    <div class="dashboard-container">
-        <header class="dashboard-header">
-            <h1>Dashboard - <span id="business-name">Não quero</span></h1>
-            <div class="user-actions">
-                <span id="user-greeting">Olá, Rodrigo!</span>
-                <button onclick="logout()" class="btn-logout">Sair</button>
-            </div>
-        </header>
+  <div class="dashboard-container">
+    
+    <!-- Cabeçalho -->
+    <header class="dashboard-header">
+      <h1>Dashboard - <span id="business-name"><%= businessName || 'Meu Negócio' %></span></h1>
+      <div class="user-actions">
+        <span id="user-greeting">Olá, <%= userName || 'Usuário' %>!</span>
+        <button class="btn-logout" onclick="logout()">Sair</button>
+      </div>
+    </header>
 
-        <div class="dashboard-grid">
-            <!-- Status WhatsApp Card - LARGURA MÉDIA -->
-            <div class="card card-whatsapp">
-                <h3>Status WhatsApp</h3>
-                <div id="whatsapp-status" class="status disconnected">
-                    <span>Desconectado</span>
-                </div>
-                
-                <div id="qrcode-container" class="hidden">
-                    <h4>Conectar WhatsApp</h4>
-                    <img id="qrcode" src="" alt="QR Code para conectar WhatsApp">
-                    <p>Escaneie este QR Code com seu WhatsApp</p>
-                    <div class="instructions">
-                        <p><strong>Como conectar:</strong></p>
-                        <ol>
-                            <li>Abra o WhatsApp no seu celular</li>
-                            <li>Toque em <strong>Menu → Dispositivos conectados</strong></li>
-                            <li>Toque em <strong>Conectar um dispositivo</strong></li>
-                            <li>Escaneie o QR Code acima</li>
-                        </ol>
-                    </div>
-                </div>
+    <!-- GRID PRINCIPAL -->
+    <div class="dashboard-grid">
+      
+      <!-- STATUS WHATSAPP -->
+      <div class="card card-whatsapp">
+        <h3>Status WhatsApp</h3>
 
-                <div id="success-container" class="hidden">
-                    <div class="success-icon">✅</div>
-                    <div class="success-message">WhatsApp Conectado!</div>
-                    <p>O bot está pronto para receber mensagens</p>
-                </div>
+        <div id="whatsapp-status" class="status disconnected">Desconectado</div>
 
-                <!-- ✅ CORREÇÃO: Botão único que muda dinamicamente -->
-                <button id="whatsapp-action-btn" class="btn-primary" onclick="toggleWhatsApp()">
-                    Conectar WhatsApp
-                </button>
-            </div>
-
-            <!-- Configurações do Negócio - LARGURA MAIOR -->
-            <div class="card card-business">
-                <h3>Configurações do Negócio</h3>
-                <form id="business-config-form">
-                    <div class="form-group">
-                        <label for="business-name-input">Nome do Negócio</label>
-                        <input type="text" id="business-name-input" name="businessName" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="business-type">Segmento</label>
-                        <select id="business-type" name="businessType">
-                            <option value="varejo">Varejo</option>
-                            <option value="servicos">Serviços</option>
-                            <option value="servicos">Serviços Online</option>
-                            <option value="restaurante">Restaurante</option>
-                            <option value="imoveis">Imóveis</option>
-                            <option value="outros">Outros</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label for="welcome-message">Mensagem de Boas-Vindas</label>
-                        <textarea id="welcome-message" name="welcomeMessage" rows="3" placeholder="Digite a mensagem de boas-vindas para seus clientes..."></textarea>
-                    </div>
-                    <button type="submit" class="btn-primary">Salvar Configurações</button>
-                </form>
-            </div>
-
-            <!-- Menu de Atendimento - LARGURA MÁXIMA -->
-            <div class="card card-menu">
-                <h3>Menu de Atendimento</h3>
-                <div id="menu-options-container">
-                    <!-- As opções serão carregadas via JavaScript -->
-                </div>
-                
-                <button onclick="addMenuOption()" class="btn-secondary">
-                    + Adicionar Opção
-                </button>
-            </div>
-
-            <!-- Estatísticas - LARGURA PEQUENA -->
-            <div class="card card-stats">
-                <h3>Estatísticas</h3>
-                <div class="stats-grid">
-                    <div class="stat-item">
-                        <span class="stat-number" id="total-conversations">0</span>
-                        <span class="stat-label">Conversas Hoje</span>
-                    </div>
-                    <div class="stat-item">
-                        <span class="stat-number" id="total-customers">0</span>
-                        <span class="stat-label">Clientes Atendidos</span>
-                    </div>
-                    <div class="stat-item">
-                        <span class="stat-number" id="messages-today">0</span>
-                        <span class="stat-label">Mensagens Hoje</span>
-                    </div>
-                    <div class="stat-item">
-                        <span class="stat-number" id="response-rate">0%</span>
-                        <span class="stat-label">Taxa de Resposta</span>
-                    </div>
-                </div>
-            </div>
+        <!-- QR Code -->
+        <div id="qrcode-container" class="hidden">
+          <h4>Conectar WhatsApp</h4>
+          <img id="qrcode" src="" alt="QR Code para conectar WhatsApp">
+          <p>Escaneie este QR Code com seu aplicativo WhatsApp.</p>
+          <div class="instructions">
+            <ol>
+              <li>Abra o WhatsApp no celular</li>
+              <li>Toque em <strong>Menu → Dispositivos conectados</strong></li>
+              <li>Escolha <strong>Conectar um dispositivo</strong></li>
+              <li>Escaneie o QR Code acima</li>
+            </ol>
+          </div>
         </div>
-    </div>
 
-    <script src="/socket.io/socket.io.js"></script>
-    <script src="/js/admin.js"></script>
+        <!-- Sucesso -->
+        <div id="success-container" class="hidden">
+          <div class="success-icon">✅</div>
+          <div class="success-message">WhatsApp Conectado!</div>
+          <p>O bot está pronto para receber mensagens.</p>
+        </div>
+
+        <!-- Botão de ação -->
+        <button id="whatsapp-action-btn" class="btn-primary" onclick="toggleWhatsApp()">
+          Conectar WhatsApp
+        </button>
+      </div>
+
+      <!-- CONFIGURAÇÕES DE NEGÓCIO -->
+      <div class="card card-business">
+        <h3>Configurações do Negócio</h3>
+        <form id="business-config-form">
+          <div class="form-group">
+            <label for="business-name-input">Nome do Negócio</label>
+            <input type="text" id="business-name-input" name="businessName" required>
+          </div>
+
+          <div class="form-group">
+            <label for="business-type">Segmento</label>
+            <select id="business-type" name="businessType">
+              <option value="varejo">Varejo</option>
+              <option value="servicos">Serviços</option>
+              <option value="restaurante">Restaurante</option>
+              <option value="imoveis">Imóveis</option>
+              <option value="outros">Outros</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="welcome-message">Mensagem de Boas-Vindas</label>
+            <textarea id="welcome-message" name="welcomeMessage" rows="3"
+              placeholder="Digite a mensagem de boas-vindas para seus clientes..."></textarea>
+          </div>
+
+          <button type="submit" class="btn-primary">Salvar Configurações</button>
+        </form>
+      </div>
+
+      <!-- MENU DE ATENDIMENTO -->
+      <div class="card card-menu">
+        <h3>Menu de Atendimento</h3>
+        <div id="menu-options-container">
+          <p class="no-options">Nenhuma opção cadastrada ainda.</p>
+        </div>
+        <button class="btn-secondary" onclick="addMenuOption()">+ Adicionar Opção</button>
+      </div>
+
+      <!-- ESTATÍSTICAS -->
+      <div class="card card-stats">
+        <h3>Estatísticas</h3>
+        <div class="stats-grid">
+          <div class="stat-item">
+            <span class="stat-number" id="total-conversations">0</span>
+            <span class="stat-label">Conversas Hoje</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-number" id="total-customers">0</span>
+            <span class="stat-label">Clientes Atendidos</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-number" id="messages-today">0</span>
+            <span class="stat-label">Mensagens Hoje</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-number" id="response-rate">0%</span>
+            <span class="stat-label">Taxa de Resposta</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/js/admin.js"></script>
 </body>
 </html>
